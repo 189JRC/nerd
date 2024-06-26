@@ -1,0 +1,70 @@
+name: Deploy to Linode
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  # Use the same ssh-agent socket value across all jobs
+  SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # commented out while debugging
+    # - name: Install expect
+    #   run: sudo apt-get update && sudo apt-get install -y expect
+
+    - name: Set up SSH
+      run: |
+        # Start the SSH agent
+        ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+        
+        # Create the askpass script
+        # echo "echo ${{ secrets.LINODE_SSH_KEY_PASSPHRASE }}" > ~/.ssh_askpass && chmod +x ~/.ssh_askpass
+        
+        # Add the private key to the agent using the askpass script
+        echo "${{ secrets.LINODE_SSH_KEY }}" | tr -d '\r' > keyfile
+        chmod 600 keyfile
+        DISPLAY=:0 SSH_ASKPASS=~/.ssh_askpass ssh-add keyfile > /dev/null
+        
+        # Create .ssh directory
+        mkdir -p ~/.ssh
+        
+        # Add known hosts to avoid SSH prompts
+        ssh-keyscan -H ${{ secrets.WEB_URL }} >> ~/.ssh/known_hosts
+
+    - name: Set up profuction directory
+      run: |
+        ssh -o StrictHostKeyChecking=no root@${{ secrets.WEB_URL }} << 'EOF'
+          mkdir -p /root/production_dir
+        EOF
+
+    - name: Copy files to remote server
+      run: scp -o StrictHostKeyChecking=no -r ./* root@${{ secrets.WEB_URL }}:/root/production_dir
+
+    - name: Create and activate virtual environment on remote server
+      run: |
+        ssh -o StrictHostKeyChecking=no root@${{ secrets.WEB_URL }} << 'EOF'
+          cd /root/production_dir
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+        EOF
+    
+    - name: SSH and deploy
+      run: |
+        ssh -o StrictHostKeyChecking=no root@${{ secrets.WEB_URL }} << 'EOF'
+          echo "SSH AND DEPLOY"
+          cd /root/production_dir
+          source venv/bin/activate
+          docker-compose --build --no-cache
+          docker-compose up
+        EOF

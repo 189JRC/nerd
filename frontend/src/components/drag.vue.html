@@ -1,0 +1,431 @@
+<template>
+    <div id="draggable-content" class="col-lg-3 col-md-6 col-12">
+        <div class="card my-2 border-top border-5" :class="border_colour" id="column"
+            style="background-color: #EEEEEE; border:none">
+            <div class="d-flex pt-2 rounded sticky-top border-bottom header-shadow" style="background-color: #EEEEEE">
+                <h4 class="mx-3">{{ header_text }}</h4>
+                <h4>{{ taskList.length }}</h4>
+            </div>
+            <div class="card-body mt-0 pt-0">
+                <!-- TASK CARD -->
+                <draggable v-bind:class="{ 'pb-5': !taskList.length }" :list="taskList" group="tasks" @change="log"
+                    itemKey="task_id" filtered=".no_drag" handle=".handle" ghost-class="ghost">
+                    <template #item="{ element, index }">
+                        <div :class="{ no_drag: element.task_status == 'blocked' }">
+                            <div class="row pt-2">
+                                <div class="col-11 m-auto rounded-3 shadow-sm"
+                                    :class="get_background_colour(element.countdown, element.task_status)">
+                                    <div :class="{ 'handle': user.org_roles.includes('retailer') }">
+                                        <div class="d-flex justify-content-between">
+                                            <div class="mt-2">
+                                                <h6>{{ element.project_name }}</h6>
+                                            </div>
+                                            <div v-if="user.org_roles.includes('retailer')">
+                                                <!-- dropdown for mobile devices -->
+                                                <Dropdown id="status-dropdown" :options="statuses" optionLabel="name"
+                                                    class="w-full md:w-14rem" :value="element.status"
+                                                    @change="handle_option_change(element, $event)">
+                                                    <template #option="{ option }">
+                                                        {{ capitalise_first_letter(option.name) }}
+                                                    </template>
+                                                </Dropdown>
+                                            </div>
+                                        </div>
+                                        <p>{{ element.task_name }}</p>
+                                        <hr />
+                                    </div>
+                                    <Accordion :multiple="true" expandIcon="pi pi-plus" collapseIcon="pi pi-minus">
+                                        <AccordionTab header="Details">
+                                            <p>{{ element.task_description }}</p>
+                                        </AccordionTab>
+                                        <AccordionTab header="Resources">
+                                            <p>{{ element.task_resources }}</p>
+                                        </AccordionTab>
+                                        <AccordionTab header="Estimated Effort">
+                                            <p>{{ element.effort_required }} hours</p>
+                                        </AccordionTab>
+                                        <AccordionTab header="Why is this task blocked?"
+                                            v-if="element.task_status == 'blocked'">
+                                            <textarea v-if="user.org_roles.includes('retailer')" name="blocked_reason"
+                                                type="text" class="form-control mt-1" style="width: 100%"
+                                                :id="element.task_id + ' reason'" rows="4"
+                                                placeholder="Enter a reason. e.g awaiting approval from external supplier."
+                                                v-model="element.blocked_reason" v-on:change="element.dirty = true;
+        update_task(element);">
+        </textarea>
+                                            <p v-else>{{ element.blocked_reason }}</p>
+                                        </AccordionTab>
+                                        <AccordionTab header="What is the plan to unblock this task?"
+                                            v-if="element.task_status == 'blocked'">
+                                            <textarea v-if="user.org_roles.includes('retailer')" name="blocked_plan"
+                                                class="form-control mt-1" style="width: 100%"
+                                                :id="element.task_id + ' how'" rows="4"
+                                                placeholder="Enter a suggestion. e.g: Meeting in place 03/02/24."
+                                                v-model="element.blocked_plan" v-on:change="element.dirty = true;
+        update_task(element);"></textarea>
+                                            <p v-else>{{ element.blocked_plan }}</p>
+                                        </AccordionTab>
+                                    </Accordion>
+                                    <div v-if="element.task_status !== 'complete'"
+                                        class="d-flex justify-content-center pb-2">
+                                        <div v-if="element.countdown > 0" id="countdown">
+                                            <i class="pi pi-calendar me-1"></i>
+                                            <span>{{ element.countdown }} {{ element.countdown > 1 ? 'days' :
+            'day' }}
+                                                left</span>
+                                        </div>
+                                        <div v-else-if="element.countdown == 0" id="countdown"
+                                            class="d-flex align-items-center">
+                                            <i class="pi pi-calendar me-1"></i>
+                                            <span>Due Today!</span>
+                                        </div>
+                                        <div v-else id="countdown" class="d-">
+                                            <i class="pi pi-calendar me-1"></i>
+                                            <span>Overdue!</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </draggable>
+            </div>
+        </div>
+    </div>
+</template>
+
+
+<script>
+import draggable from "vuedraggable";
+
+import Panel from "primevue/panel";
+import Dropdown from "primevue/dropdown";
+
+import Accordion from "primevue/accordion";
+import AccordionTab from "primevue/accordiontab";
+
+export default {
+    name: "ShowFilteredTasksDraggable",
+    data() {
+        return {
+            display_blocked_suggestions_task_id: "",
+            statuses: [{
+                name: "blocked"
+            },
+            {
+                name: "not started"
+            },
+            {
+                name: "in progress"
+            },
+            {
+                name: "complete"
+            }],
+
+        };
+    },
+    props: ["readinessTracker", "statusFilter", "user", "taskList", "disabled"],
+    components: { draggable, Dropdown, Panel },
+    computed: {
+        header_text() {
+            switch (this.statusFilter) {
+                case 'blocked':
+                    return 'Blocked';
+                case 'not started':
+                    return 'Not Started';
+                case 'in progress':
+                    return 'In Progress';
+                case 'complete':
+                    return 'Complete';
+                default:
+                    return '';
+            }
+        },
+        border_colour() {
+            switch (this.statusFilter) {
+                case 'blocked':
+                    return 'border-warning';
+                case 'not started':
+                    return 'border-secondary';
+                case 'in progress':
+                    return 'border-primary';
+                case 'complete':
+                    return 'border-success';
+                default:
+                    return '';
+            }
+        },
+        header_icon_class() {
+            switch (this.statusFilter) {
+                case 'blocked':
+                    return 'pi-pause';
+                case 'not started':
+                    return 'pi-step-forward';
+                case 'in progress':
+                    return 'pi-forward';
+                case 'complete':
+                    return 'pi-check';
+                default:
+                    return '';
+            }
+        }
+    },
+    methods: {
+        dropdown_icon_class(status) {
+            switch (status) {
+                case 'blocked':
+                    return 'pi-pause';
+                case 'not started':
+                    return 'pi-step-forward';
+                case 'in progress':
+                    return 'pi-forward';
+                case 'complete':
+                    return 'pi-check';
+                default:
+                    return '';
+            }
+        },
+        async update_task(task) {
+            try {
+                console.log("In update task")
+                const payload = await this.readinessTracker.update_task_via_api(task);
+                task.task_progress_id = payload.task_progress_id
+                this.$toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: payload.message,
+                    life: 3000,
+                });
+            } catch {
+                this.$toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: "Failed to update task. Please try again.",
+                    life: 3000,
+                });
+            }
+        },
+        handle_option_change(element, event) {
+            console.log("in handle_option_change")
+            let task = element;
+            const selectedOption = event.value; // Access the selected option
+            const option_name = selectedOption.name;
+            task.task_status = option_name;
+            task.dirty = true;
+            // Now you have both the selected option and the element data
+            this.update_task(task);
+            this.$emit("update_dropdown", { task, task_status: option_name });
+        },
+        log: function (evt) {
+            if (evt.moved) {
+            }
+            if (evt.added) {
+            }
+            if (evt.removed) {
+            }
+            // now update all the statuses that are not correct
+            const update_status_from_location = (tasks, statusFilter) => {
+                for (let index = 0; index < tasks.length; index++) {
+                    const task = tasks[index];
+                    if (!(task.task_status == statusFilter)) {
+                        task.dirty = true;
+                        task.task_status = statusFilter;
+                        this.update_task(task);
+                        // and make sure the class is updated correctly
+                    }
+                }
+            };
+            // by executing the function just defined
+            update_status_from_location(this.taskList, this.statusFilter);
+            // Now sort the list by date
+            this.taskList.sort((a, b) => {
+                const difference = a.date_due - b.date_due;
+                return difference;
+            });
+        },
+
+        get_background_colour(countdown, task_status) {
+            if (task_status === "complete") {
+                return "rag-green";
+            } else if (countdown <= 0) {
+                return "rag-red-overdue";
+            } else if (countdown <= 2) {
+                return "rag-amber";
+            } else if (countdown <= 5) {
+                return "rag-yellow";
+            } else {
+                return "rag-white";
+            }
+        },
+        capitalise_first_letter(word) {
+            return `${word.charAt(0).toUpperCase()}${word.slice(1)}`;
+        },
+    }
+};
+</script>
+
+<style scoped>
+hr {
+    margin: 0px
+}
+
+#column {
+    background: transparent;
+    z-index: 1;
+    /* min-height: 100vh; */
+}
+
+.no-border {
+    border: 0;
+    box-shadow: none;
+    /* You may want to include this as bootstrap applies these styles too */
+}
+
+.header-shadow {
+    box-shadow: 0 3px 2px -2px gray;
+}
+
+textarea.form-control {
+    font-size: 0.8rem;
+    font-family: sans-serif;
+}
+
+#countdown:hover {
+    cursor: default;
+}
+
+.rag-red {
+    background-color: #F28585;
+}
+
+.rag-red-overdue {
+    background-color: #F28585;
+    box-shadow: 0 0 0 0 rgba(255, 82, 82, 1);
+    animation: pulse-red 2s infinite;
+}
+
+/* @keyframes pulse-red {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(255, 82, 82, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 82, 82, 0);
+    }
+} */
+
+.rag-amber {
+    background-color: #F6995C;
+}
+
+.rag-yellow {
+    background-color: #F6F193;
+}
+
+.rag-green {
+    background-color: #B7E5B4
+}
+
+.rag-white {
+    background-color: #fffafa
+}
+
+.handle:hover {
+    cursor: grab;
+}
+
+.handle:active {
+    cursor: grabbing;
+}
+
+textarea {
+    width: auto;
+}
+
+/* .ghost{
+    opacity: 0.8;
+    background-color: cyan;
+  } */
+
+@media (max-width: 768px) {
+    #column {
+        min-height: 0px;
+    }
+
+}
+</style>
+
+<style>
+#draggable-content .p-dropdown {
+    width: none;
+    background-color: transparent;
+    border: none;
+}
+
+#draggable-content .p-dropdown-items-wrapper {
+    width: auto;
+    margin: none;
+    padding: 0px;
+    background-color: transparent;
+}
+
+#draggable-content .p-dropdown:not(.p-disabled).p-focus {
+    box-shadow: none;
+}
+
+.p-dropdown-items {
+    padding: 0px;
+    margin: 0px;
+    width: auto;
+}
+
+#draggable-content .p-dropdown-item {
+    padding: none;
+    margin: none;
+    width: auto;
+}
+
+#draggable-content .p-panel {
+    border: none;
+}
+
+#draggable-content .p-panel-header {
+    border: none;
+    background-color: transparent;
+    font-size: small;
+}
+
+#draggable-content .p-panel-content {
+    border: none;
+    background-color: transparent;
+    font-size: small;
+}
+
+#draggable-content .p-accordion {
+    background-color: transparent;
+}
+
+#draggable-content .p-accordion-header-link {
+    border: none;
+    background-color: transparent;
+    font-size: small;
+    text-decoration: none;
+    color: black;
+    padding: 0.75rem 1.25rem
+}
+
+
+#draggable-content .p-accordion-content {
+    border: none;
+    background-color: transparent;
+    font-size: small;
+    padding: 0px 20px;
+}
+</style>

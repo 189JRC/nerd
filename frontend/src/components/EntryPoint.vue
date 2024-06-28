@@ -25,7 +25,7 @@
     <div class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
       <input v-model="target_url" placeholder="Enter URL here"
         class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
-      <button @click="fetch_text_data"
+      <button @click="investigation.fetch_text_data(this.target_url, this.type_of_scrape)"
         class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
         Fetch
       </button>
@@ -38,177 +38,186 @@
     <br>
     <hr>
     <div class="flex justify-center">
-      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
-        @click="process_text_string_with_nlp_model">Process Text</button>
-      <button class="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+      <button class="bg-blue-300 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+        @click="investigation.process_text_string_with_nlp_model">Process Text</button>
+
+      <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+        @click="highlightText">highlight text</button>
+
+      <button class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
         @click="render_network">build
         network</button>
-      <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
-        @click="highlightText">highlight text</button>
+      <button class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+        @click="unhighlight_text">unhighlight text</button>
     </div>
   </div>
   <br>
   <hr>
   <br>
   <div ref="highlighted_text_container" @mouseup="handle_mouse_selection"
-    class="isolate w-4/5 max-h-screen rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
+    class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
     <br>
-    
-    <div v-if="highlighted_text" v-html="highlighted_text"></div>
-    <div v-else>{{ text }}</div>
-    <div v-if="show_popup" :style="popup_style" class="popup">
-      <p><strong>{{ popup_text }}</strong></p>
-      <hr>
-      <br>
-      <button class="bg-green-500" @click="mark_as_significant">Significant?</button><br>
-      <button class="bg-orange-500" @click="make_insignificant">Not significant?</button>
+
+    <div ref="chunk_container" v-html="investigation.current_chunk">
+
+
     </div>
+    <div class="absolute bottom-0 left-0 w-full flex justify-between items-center bg-white p-4">
+      <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+        @click="see_previous_chunk">
+        < </button>{{ chunk_index + 1 }} / {{ this.investigation.text_chunks.length }}
+
+          <!-- <button class="bg-blue-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+            @click="highlightText">view full text</button> -->
+          <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+            @click="see_next_chunk">></button>
+    </div>
+
+  </div>
+  <div v-if="show_popup" :style="popup_style" class="popup">
+    <p><strong>{{ popup_text }}</strong><button class="ml-12 p-2 bg-gray-300" @click="closePopup()">X</button></p>
+    <hr>
+    <br>
+    <button v-if="potential_entity" class="bg-green-500" @click="mark_as_significant('entity')">Significant
+      entity?</button><br>
+    <button v-if="potential_detail" class="bg-green-500" @click="mark_as_significant('detail')">Significant
+      Detail?</button><br>
+    <button v-if="already_significant" class="bg-orange-500" @click="make_insignificant">Not significant?</button>
   </div>
 
-
+  <!--DEBUG-->
   <div class="flex">
     <div class="mt-5 p-4 max-w-md mx-auto dark:bg-gray-200 rounded-l shadow-md">
+      <h1 class="text-3xl">DEBUG</h1>
       <h5 class="text-dark-grey text-2xl">All entities</h5>
       <ul>
-        <li v-for="entity in entities" :key="entity.text">
+        <li v-for="entity in investigation.entities" :key="entity.text">
           {{ entity }}
         </li>
       </ul>
     </div>
     <div class="mt-5 p-4 max-w-md mx-auto dark:bg-gray-200 rounded-l shadow-md">
-      <h5 class="text-dark-grey text-2xl">Significant entities</h5>
+      <h5 class="text-dark-grey text-2xl">Significant Details</h5>
       <ul>
-        <li v-for="significant_entity in significant_entities" :key="significant_entity.text">
-          {{ significant_entity }}
+        <li v-for="significant_detail in investigation.significant_details" :key="significant_detail.text">
+          {{ significant_detail }}
         </li>
       </ul>
     </div>
     <div class="mt-5 p-4 max-w-md mx-auto dark:bg-gray-200 rounded-l shadow-md">
       <h5 class="text-dark-grey text-2xl">Diagram Entities</h5>
+
       <ul>
-        <li v-for="entity in diagram_entities" :key="entity.text">
-          {{ entity }}
+        <li v-for="diagram_entity in diagram_entities" :key="diagram_entity.text">
+          {{ diagram_entity }}
         </li>
+
       </ul>
     </div>
   </div>
 
-  <div id="network" class="w-4/5 h-500 border border-blue-500 rounded mx-auto my-4"
-    style="height: 500px; width: 1000px"></div>
+
+  <div class="flex">
+    <div class="mt-5 p-4 w-[400px] mx-auto dark:bg-gray-200 rounded-xl pl-5 pb-5 pr-5 shadow-md">
+      <h5 class="text-dark-grey text-2xl">All entities</h5>
+      <div class="col-3">
+        <draggable class="list-group" :list="investigation.entities" group="people" itemKey="name">
+          <template #item="{ element, index }">
+            <div v-if="element.label == 'PERSON'"
+              class="list-group-item mb-1 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+              {{ element.name }} {{ index }} {{ element.label }}</div>
+            <div v-else
+              class="list-group-item mb-1 bg-blue-300 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+              {{ element.name }} {{ index }} {{ element.label }}</div>
+          </template>
+        </draggable>
+        <h5 class="text-dark-grey text-2xl">All details</h5>
+        <draggable class="list-group" :list="investigation.significant_details" group="people" itemKey="name">
+          <template #item="{ element, index }">
+            <div v-if="element.label == 'SIGNIFICANT'"
+              class="list-group-item mb-1 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+              {{ element.name }} {{ index }} {{ element.label }}</div>
+            <div v-else
+              class="list-group-item mb-1 bg-blue-300 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+              {{ element.name }} {{ index }} {{ element.label }}</div>
+          </template>
+        </draggable>
+      </div>
+    </div>
+    <div id="network" class="w-4/5 h-500 border border-blue-500 rounded mx-auto my-4"
+    style="height: 500px; width: 1000px">
+  </div>
+  <div class="mt-5 p-4 w-[400px] mx-auto dark:bg-gray-200 rounded-xl  pl-5 pb-5 pr-5  shadow-md">
+      <h5 class="text-dark-grey text-2xl">Diagram entities</h5>
+      <div class="col-3">
+        <draggable class="list-group" :list="diagram_entities" group="people" itemKey="name">
+          <template #item="{ element, index }">
+            <div v-if="element.label == 'PERSON'"
+              class="list-group-item mb-1 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+              {{ element.name }} {{ index }} {{ element.label }}</div>
+            <div v-else
+              class="list-group-item mb-1 bg-blue-300 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+              {{ element.name }} {{ index }} {{ element.label }}</div>
+          </template>
+        </draggable>
+      </div>
+    </div>
+  </div>
+  <br>
 </template>
 <script>
 import { Network, DataSet } from 'vis-network/standalone/umd/vis-network.min.js';
-
+import { ref, onMounted, nextTick } from 'vue';
+import draggable from 'vuedraggable'
+//import nestedDraggable from "./infra/nested";
 
 export default {
+  name: "two-lists",
+  display: "Three Lists",
+  order: 1,
+  components: {
+    draggable,
+  },
+  name: "nested-draggable",
+  props: {
+    investigation: {
+      type: Object
+    },
+  },
   data() {
     return {
-      text: "The family and friends of a British teenager who is missing in Tenerife have shared a picture of a 'possible sighting' of the teenager as the desperate search to find him goes on. The search for Jay Slater is now into its second week after the 19-year-old was reported missing by his friends on the Spanish island last Monday (June 17). The teenager reportedly walked off alone into a mountainous area in the Rural de Teno Park, close to the village of Masca, after leaving an Airbnb rental apartment where he had stayed with two people he met at the NRG music festival. Urgent searches, involving Civil Guard officers, firefighters and mountain rescuers, have been ongoing in the vast area since his disappearance",
-      entities: [],
-      selected_model: "spacy",
+      diagram_entities: [
+        { name: "test", id: 1 },
+      ],
+      list2: [
+        { name: "Juan", id: 5 },
+        { name: "Edgard", id: 6 },
+        { name: "Johnson", id: 7 }
+      ],
+      chunk_index: 0,
       show_popup: false,
-      significant_entities: [],
       data_entity_selected_for_relevance: "ZZZ",
-      diagram_entities: [{ "label": "GPE", "name": "Tenerife" },
-      { "label": "PERSON", "name": "Jay Slater" },
-      { "label": "DATE", "name": "19-year-old" }],
+      // diagram_entities: [{ "label": "GPE", "name": "Tenerife" },
+      // { "label": "PERSON", "name": "Jay Slater" },
+      // { "label": "DATE", "name": "19-year-old" }],
       target_url: "https://www.telegraph.co.uk/world-news/2024/06/24/jay-slater-missing-update-parents-release-cctv-tenerife/",
       highlighted_text: null,
       selected_text: null,
       youtube_url: null,
-      type_of_scrape: "youtube_transcript",
+      type_of_scrape: "article",
       data_source_option: null,
+      already_significant: false,
+      potential_entity: false,
+      potential_detail: false
     };
   },
-  // mounted() {
-  //   document.addEventListener('selectionchange', this.handle_selection_change);
-  // },
-  // beforeUnmount() {
-  //   document.removeEventListener('selectionchange', this.handle_selection_change);
-  // },
   updated() {
-    this.addEventListeners();
+    this.add_event_listeners_for_highlighting();
+    //console.log(">>>", this.$refs.chunk_container)
   },
   methods: {
-    // TODO:1: Put all fetch calls into seperate JS object file
-    reset_state() {
-      this.highlighted_text = ""
-      this.text = ""
-    },
-    async process_text_string_with_nlp_model() {
-      try {
-        const response = await fetch('http://localhost:5000/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ text: this.text, model: this.selected_model })
-        });
-
-        if (!response.ok) {
-          throw new Error('Network response was not ok ' + response.statusText);
-        }
-
-        const data = await response.json();
-        this.entities = data;
-        this.make_significant_entities(data)
-      } catch (error) {
-        console.error('There was a problem with the fetch. Error:', error);
-      }
-    },
-    async fetch_text_data() {
-      console.log("fetch_text_data called on: ", this.target_url)
-      console.log("type of scrape: ", this.type_of_scrape)
-      this.reset_state()
-      try {
-        const response = await fetch('http://localhost:5000/scrape', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ url: this.target_url, type_of_scrape: this.type_of_scrape })
-        });
-
-        if (!response.ok) {
-          throw new Error('Network response was not ok ' + response.statusText);
-        }
-
-        const data = await response.json();
-        console.log(data.article_text)
-        this.text = data.article_text;
-
-      } catch (error) {
-        console.error('There was a problem with the fetch operation:', error);
-      }
-    },
-    // async fetch_youtube_transcript() {
-    //   console.log("fetch_article_data_called on: ", "https://www.youtube.com/watch?v=1zErA1Igtow") 
-    //   try {
-    //     const response = await fetch('http://localhost:5000/scrape_youtube_transcript', {
-    //       method: 'POST',
-    //       headers: {
-    //         'Content-Type': 'application/json'
-    //       },
-    //       body: JSON.stringify({ target_url: "1zErA1Igtow" })
-    //     });
-
-    //     if (!response.ok) {
-    //       throw new Error('Network response was not ok ' + response.statusText);
-    //     }
-
-    //     const data = await response.json();
-    //     this.text = data.transcript_text;
-
-    //   } catch (error) {
-    //     console.error('There was a problem with the fetch operation:', error);
-    //   }
-    // },
-    make_significant_entities(entity_objects) {
-      entity_objects.forEach((entity) => {
-        this.significant_entities.push(entity);
-      });
-    },
     render_network() {
+      console.log("build network")
       const nodes = [];
       const edges = [];
       const nodeMap = new Map(); // To track node ids
@@ -222,28 +231,17 @@ export default {
       };
 
       // Process entities to create nodes
-      console.log("raw", this.diagram_entities[0])
+      // console.log("raw", this.diagram_entities[0])
 
-      ///////////////////////
-      //this if fast track
-      let parsedEntities = this.diagram_entities
-      //this if user selection
-
-      // let parsedEntities = []
-      // this.diagram_entities.forEach((entity) => {
-      //   parsedEntities.push(JSON.parse(entity))
-      // })
-
-      ///////////////////////
-      console.log("processed", parsedEntities)
-      parsedEntities.forEach((entity) => {
+      console.log("processed", this.diagram_entities)
+      this.diagram_entities.forEach((entity) => {
         console.log(entity, entity.name, entity.label)
         addNode(entity.name, `${entity.label}\n(${entity.name})`);
       });
 
       // Create edges based on narrative structure
       let lastEntity = null;
-      parsedEntities.forEach((entity) => {
+      this.diagram_entities.forEach((entity) => {
         if (lastEntity) {
           edges.push({
             from: nodeMap.get(lastEntity.name).id,
@@ -336,93 +334,161 @@ export default {
       };
       new Network(container, data, options);
     },
+    unhighlight_text() {
+      //run through chunk container
+      //match any strings with investigation entities
+      //extend string to cover <span> and </span>
+
+
+      //const spans = chunk_div.querySelectorAll('span');
+      // console.log(spans)
+      // spans.forEach(highlighted_span_element => {
+      //   console.log(highlighted_span_element.outerHTML)
+      //   chunk_div.innerHTML.replace(highlighted_span_element, console.log(highlighted_span_element.textContent))})
+      const spans = this.$refs.chunk_container.querySelectorAll('span');
+      console.log(spans, spans.length)
+
+      for (let counter = 0; counter < spans.length; counter++) {
+        this.$refs.chunk_container.innerHTML = this.$refs.chunk_container.innerHTML.replace(`<span class="indicator">`, "")
+        this.$refs.chunk_container.innerHTML = this.$refs.chunk_container.innerHTML.replace(`</span>`, "")
+      }
+
+      for (let counter = 0; counter < spans.length; counter++) {
+        this.$refs.chunk_container.innerHTML = this.$refs.chunk_container.innerHTML.replace(`<span class="detail">`, "")
+        this.$refs.chunk_container.innerHTML = this.$refs.chunk_container.innerHTML.replace(`</span>`, "")
+      }
+
+      this.investigation.current_chunk = this.$refs.chunk_container.innerHTML
+
+      console.log(this.$refs.chunk_container.innerHTML)
+
+
+    },
     highlightText() {
       console.log("highlightText called")
-      let highlighted = this.text;
+      //run through removing spans to reset....
+      console.log(this.investigation.entities)
 
-      this.entities.forEach(entity => {
+      let highlighted = this.investigation.current_chunk;
+      this.investigation.entities.forEach(entity => {
         const regex = new RegExp(`\\b${entity.name}\\b`, 'g');
         console.log(entity.name)
-        const replacement = `<span class="indicator" data-entity='${JSON.stringify(entity)}'>${entity.name}</span>`;
+        const replacement = `<span class="indicator">${entity.name}</span>`;
         highlighted = highlighted.replace(regex, replacement);
       });
-      this.highlighted_text = highlighted;
 
+      this.investigation.significant_details.forEach(entity => {
+        const regex = new RegExp(`\\b${entity.name}\\b`, 'g');
+        console.log(entity.name)
+        const replacement = `<span class="detail">${entity.name}</span>`;
+        highlighted = highlighted.replace(regex, replacement);
+      });
 
+      this.investigation.text_chunks[this.chunk_index] = highlighted
+      this.investigation.current_chunk = this.investigation.text_chunks[this.chunk_index]
     },
-    handle_selection_change() {
-      const selection = document.getSelection()
-      const selected_text = selection.toString();
-      console.log(selected_text)
-    },
-    addEventListeners() {
+
+    add_event_listeners_for_highlighting() {
       const indicators = this.$refs.highlighted_text_container.querySelectorAll('.indicator');
       this.$nextTick(() => { //next tick defers execution
         indicators.forEach(indicator => {
-          indicator.removeEventListener('click', this.handleIndicatorClick);
-          indicator.addEventListener('click', this.handleIndicatorClick);
+          indicator.removeEventListener('click', this.handle_indicator_click);
+          indicator.addEventListener('click', this.handle_indicator_click);
         });
       });
     },
-    handleIndicatorClick(event) {
+    handle_indicator_click(event) {
       this.popup_text = event.target.textContent;
       this.data_entity_selected_for_relevance = event.target.getAttribute("data-entity")
       this.show_popup = true;
       this.popup_style = {
-        position: 'absolute',
-        top: `${event.clientY}px`,
-        left: `${event.clientX}px`
+        position: 'relative',
+        top: `${event.clientY - 50}px`,
+        left: `${event.clientX - 50}px`
       };
     },
-    mark_as_significant() {
+    mark_as_significant(type) {
       // popup text is the highlighted word!¬
-      console.log(this.popup_text)
-      const new_significant_object = {
-        label: "SIGNIFICANT",
-        name: `${this.popup_text}`
+      console.log("TYPE+", type)
+      let new_significant_object
+
+      if (type == 'entity') {
+        console.log(this.popup_text)
+        new_significant_object = {
+          label: "ENTITY",
+          name: `${this.popup_text}`
+        }
+      } else if (type == 'detail') {
+        console.log(this.popup_text)
+        new_significant_object = {
+          label: "SIGNIFICANT",
+          name: `${this.popup_text}`
+        }
       }
-      this.diagram_entities.push(new_significant_object) //`{"label":"SIGNIFICANT", "name":"${this.popup_text}"}`)
-      this.entities.push(new_significant_object) //`{"label":"SIGNIFICANT", "name":"${this.popup_text}"}`)
+      // this.diagram_entities.push(new_significant_object) //`{"label":"SIGNIFICANT", "name":"${this.popup_text}"}`)
+      if (new_significant_object && type == 'entity') {
+        this.investigation.entities.push(new_significant_object) //`{"label":"SIGNIFICANT", "name":"${this.popup_text}"}`)
+      } else if (new_significant_object && type == 'detail') {
+        this.investigation.significant_details.push(new_significant_object)
+      } else {
+        console.log("No new entities or significant details created")
+      }
       this.highlightText()
-      this.closePopup();
-    },
-    dismiss() {
-      if (this.currentSpan) {
-        this.currentSpan.classList.add('dismissed');
-      }
       this.closePopup();
     },
     make_insignificant() {
       // TODO: might be less bug prone to resort the ents list with filter method here instead.
       // BIG TODO: Need to gether bunch these terms up and send them to the back end to make search queries out of.
-      console.log(this.diagram_entities)
-      for (let ent_index = 0; ent_index < this.diagram_entities.length; ent_index++) {
-        console.log(this.diagram_entities[ent_index])
-        if (this.diagram_entities[ent_index].name == this.popup_text) {
+      // console.log(this.diagram_entities)
+      this.$refs
+      for (let ent_index = 0; ent_index < this.investigation.entities.length; ent_index++) {
+        console.log(this.investigation.entities[ent_index])
+        if (this.investigation.entities[ent_index].name == this.popup_text) {
           console.log("found")
-          this.diagram_entities.splice(ent_index, 1)
+          this.investigation.entities.splice(ent_index, 1)
         }
       }
-      for (let ent_index = 0; ent_index < this.entities.length; ent_index++) {
-        console.log(this.entities[ent_index])
-        if (this.entities[ent_index].name == this.popup_text) {
-          console.log("found")
-          this.entities.splice(ent_index, 1)
-        }
-      }
-      this.highlightText()
-      console.log(this.popup_text)
+      this.unhighlight_text()
+      // this.highlightText()
+      // console.log(this.popup_text)
       this.closePopup();
     },
     closePopup() {
       this.show_popup = false;
       this.currentSpan = null;
+      this.already_significant = false
     },
     handle_mouse_selection(event) {
       console.log("Squeek!")
       console.log(event)
       const selection = document.getSelection();
       const selected_text = selection.toString();
+      console.log(selected_text)
+      const entities = this.investigation.entities;
+      //if selected_text is a 'name' in this.investigation.entities 
+      //popup buttons need to reflect this - 'not relevant?'
+      //if selected_text is a 'name' in this.investigation.significant_details 
+      //popup buttons need to reflect this - 'not relevant?'
+      //if selected_text is not present in either it needs:
+      //popup buttons: 'significant fact?' 'significant entity?'
+      this.already_significant = false
+      this.potential_entity = true
+      for (const entity_keys in this.investigation.entities) {
+        if (this.investigation.entities[entity_keys].name === selected_text) {
+          this.already_significant = true
+          this.potential_entity = false
+        } else {
+          this.potential_detail = true
+          for (const entity_keys in this.investigation.relevant_details) {
+            if (this.investigation.entities[entity_keys].name === selected_text) {
+              this.relevant_detail = true
+            } else {
+              this.potential_detail = false
+            }
+          }
+        }
+      }
+
       if (selected_text.length < 3) {
         return
       } else {
@@ -434,6 +500,18 @@ export default {
           top: `${event.clientY}px`,
           left: `${event.clientX}px`
         };
+      }
+    },
+    see_next_chunk() {
+      if (this.chunk_index < this.investigation.text_chunks.length) {
+        this.chunk_index += 1
+        this.investigation.current_chunk = this.investigation.text_chunks[this.chunk_index]
+      }
+    },
+    see_previous_chunk() {
+      if (this.chunk_index > 0 && this.chunk_index < this.investigation.text_chunks.length + 1) {
+        this.chunk_index -= 1
+        this.investigation.current_chunk = this.investigation.text_chunks[this.chunk_index]
       }
     }
   }
@@ -462,6 +540,10 @@ export default {
 
 .indicator {
   background-color: pink;
+}
+
+.detail {
+  background-color: yellow;
 }
 
 .popup {

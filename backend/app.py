@@ -5,24 +5,17 @@ from sqlalchemy import text
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
-
-# NOTE: having experimented with other hugging face models, spacy library seems most applicable for this application
-# from transformers import pipeline
-import spacy
-from spacy.matcher import Matcher
-
+from Investigation import Investigation
 app = Flask(__name__)
-CORS(app)
 
-nlp = spacy.load("en_core_web_sm")
-# tfbert_model = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english", grouped_entities=True)
+#CORS(app) # TODO:2: Restrict CORS only to frontend URL
+CORS(app, resources={r"/*": {"origins": "*"}})
 
+investigation = Investigation(model="spacy_en_sm")
 # db connection
 # TODO:2 make sample config.env. put this in it!
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://osint:osint@localhost:5432/osint"
-
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
 db = SQLAlchemy(app)
 
 
@@ -32,8 +25,6 @@ class User(db.Model):
     name = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(100), nullable=False)
 
-
-# TODO:3 add tests for articles from different sources.
 def fetch_article(url):
     """sends a get request to the url string provided as argument.
     processes response to filter out the html and returns the article text content"""
@@ -56,7 +47,9 @@ def fetch_article(url):
             article_text.append(paragraph.get_text())
 
         full_text = "\n".join(article_text)
-        # TODO:3: maybe return article in paragraph banches here. could be a job for js object in frontend
+        # TODO:3: maybe return article in paragraph banches here. could also be a job for js object in frontend
+        full_text = investigation.chunk_text(full_text)
+        print(type(full_text))
         return full_text
 
     except:
@@ -88,7 +81,7 @@ def scrape():
 
     elif type_of_scrape == "twitter":
         return jsonify({"article_text": "UNDER CONSTRUCTION"})
-        
+
     else:
         print("no target for scrape specified.")
         return jsonify({"article_text": "UNDER CONSTRUCTION"})
@@ -96,79 +89,18 @@ def scrape():
     return jsonify({"article_text": article_text})
 
 
-relevant_entities = ["GPE", "PERSON", "DATE"]
-
-
 @app.route("/process", methods=["POST"])
 def process_text():
     """Uses spaCy pipeline to get named entities from a piece of text.
     Returns a dict of ner strings that were found in text and their respective labels"""
 
-    # all pretrained entity types and descriptions: https://github.com/explosion/spaCy/discussions/9147
-    relevant_entities = [
-        "PERSON",
-        "NORP",
-        "FAC",
-        "GPE",
-        "LOC",
-        "EVENT",
-        "DATE",
-        "TIME",
-        "MONEY",
-    ]
     data = request.json
-    text = data.get("text", "")
-    model = data.get("model", "")
+    text = data.get("text")
+    entity_text_and_label_dicts = investigation.process_text(text)
+    return entity_text_and_label_dicts
 
-    doc = nlp(text)
+    
 
-    # custom defined pattern will match a text string 
-
-    # TODO:3: Make this matcher block a seperate function and store these patterns (with user defined patterns) in a db table for retrieval. 
-    # This pattern will flag the string 'a teenager was reported missing'
-    pattern = [
-        {"POS": "DET", "OP": "?"},  
-        {"POS": "NOUN", "OP": "?"},  
-        {"LEMMA": "be"},  
-        {"POS": "VERB"},  
-        {"POS": "VERB"},  
-    ]
-    # This pattern will flag the string 'Spanish Island'
-    pattern2 = [
-        {"ENT_TYPE": "NORP"},  
-        {"LOWER": "island"},  
-    ]
-
-    matcher = Matcher(nlp.vocab)
-    matcher.add("INDICATOR", [pattern])
-    # matcher.add("NORP_LOC", [pattern2])
-    matches = matcher(doc)
-
-    # Matched segments are the sequences in the process text that are flagged as matching the defined patterns
-    matched_segments = []
-    for match_id, start, end in matches:
-        span = doc[start:end]
-        matched_segments.append({"name": span.text, "label": "INDICATOR"})
-
-    entity_text_and_label_dicts = []
-    for segment in matched_segments:
-        entity_text_and_label_dicts.append(segment)
-
-    ###########
-    if model == "spacy":
-
-        for ent in doc.ents:
-            entity = (ent.text, ent.label_)
-            if ent.label_ in relevant_entities:
-                if {
-                    "name": ent.text,
-                    "label": ent.label_,
-                } not in entity_text_and_label_dicts:
-                    entity_text_and_label_dicts.append(
-                        {"name": ent.text, "label": ent.label_}
-                    )
-
-    return jsonify(entity_text_and_label_dicts) 
 
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter

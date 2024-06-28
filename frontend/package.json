@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "vis-network": "^9.1.9",
-    "vue": "^3.4.29"
+    "vue": "^3.4.29",
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@types/vis": "^4.21.27",
@@ -21,4 +22,3 @@
     "vite": "^5.3.1"
   }
 }
-

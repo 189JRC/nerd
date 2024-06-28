@@ -1,6 +1,16 @@
 <script setup>
+import { reactive } from 'vue';
 import HelloWorld from './components/HelloWorld.vue'
 import EntryPoint from './components/EntryPoint.vue'
+
+import Investigation from '../js/Investigation';
+
+let domain_origin = window.location.origin
+if (domain_origin.slice(-5) == ":3001") {
+  domain_origin = domain_origin.replace(":3001", ":5000")
+}
+
+const investigation = reactive(new Investigation(domain_origin))
 </script>
 
 <template>
@@ -33,7 +43,7 @@ Elvis has left Ceasers Palace in Las Vegas. Then he went to the Book Shop in Los
   <h1 class="text-white text-4xl">Named Entity Recognition Diagramiser</h1>
   </div>
   <br>
-  <EntryPoint/>
+  <EntryPoint :investigation="investigation"/>
   
 </template>
 

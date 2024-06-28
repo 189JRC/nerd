@@ -2,7 +2,8 @@
   <div>
     <!-- <textarea v-model="text" placeholder="Enter text here..." class="block appearance-none w-full h-64 bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 rounded shadow leading-tight focus:outline-none focus:shadow-outline mb-4"></textarea>
     <br> -->
-    <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+    {{ type_of_scrape }}
+    <div class="w-2/5 mx-auto bg-white p-6 rounded-lg shadow-md">
 
       <div class="flex justify-center">
         <input id="option1" name="options" type="radio" value="article" v-model="type_of_scrape"
@@ -16,27 +17,44 @@
         <input id="option3" name="options" type="radio" value="twitter" v-model="type_of_scrape"
           class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
         <label for="option3" class="ml-2 mr-2 block text-gray-700">Twitter</label>
+        
+        <input id="option3" name="options" type="radio" value="vector_search" v-model="type_of_scrape"
+          class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
+        <label for="option3" class="ml-2 mr-2 block text-gray-700">Document Vector Search</label>
       </div>
       <!-- <div class="mt-4 text-center">
         <p>Selected Option: {{ data_source_option }}</p>
       </div> -->
     </div>
-
-    <div class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
-      <input v-model="target_url" placeholder="Enter URL here"
+{{ string_for_vector_comparison }}
+    <div v-if="type_of_scrape=='vector_search'" class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
+      <input v-model="string_for_vector_comparison" placeholder="Enter search query here"
         class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
-      <button @click="investigation.fetch_text_data(this.target_url, this.type_of_scrape)"
+      <button   @click="investigation.fetch_text_data(this.search_target=null, this.type_of_scrape, this.string_for_vector_comparison)"  
         class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
-        Fetch
+        <!--//@click="investigation.fetch_vector_comparison_data(this.string_for_vector_comparison)"-->
+        Find Comparison
+      </button>
+    </div>
+
+    <div v-else-if="type_of_scrape!=='vector_search'" class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
+      <input v-model="search_target" placeholder="Enter URL or search query here"
+        class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
+      <button @click="investigation.fetch_text_data(this.search_target, this.type_of_scrape)"
+        class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+        Fetch/search
       </button>
       <!--USE SVG TO GUIDE USER-->
       <!-- <svg height="100" width="100" >
         <circle cx="50" cy="50" r="20" stroke="black" stroke-width="1" fill="none"/>
       </svg> -->
-
     </div>
+
+
     <br>
     <hr>
+  
+
     <div class="flex justify-center">
       <button class="bg-blue-300 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
         @click="investigation.process_text_string_with_nlp_model">Process Text</button>
@@ -54,7 +72,24 @@
   <br>
   <hr>
   <br>
-  <div ref="highlighted_text_container" @mouseup="handle_mouse_selection"
+
+  <div v-if="type_of_scrape=='vector_search'" ref="highlighted_text_container" @mouseup="handle_mouse_selection" class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
+    <!-- <h1 class="text-dark-grey text-2xl">VECTOR SEARCH</h1>
+    <button @click="request_document_records()"
+      class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+      get docs
+    </button> {{ document_record_metadata }}
+    Enter a potential detail to find a match in your document base.... e.g. 'he attended a festival'}-->
+    <div ref="chunk_container">
+    {{  }}
+    
+      <li v-for="(value, key) in investigation.vector_comparison_metadata" :key="key">
+        <strong>{{ key }}:</strong> {{ value }}
+      </li>
+    </div>
+    </div>
+
+  <div v-else ref="highlighted_text_container" @mouseup="handle_mouse_selection"
     class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
     <br>
 
@@ -164,6 +199,24 @@
     </div>
   </div>
   <br>
+  <!-- <h1 class="text-dark-grey text-2xl">VECTOR SEARCH</h1>
+  <button @click="request_document_records()"
+        class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+        get docs
+      </button>
+      {{ document_record_metadata }}
+  Enter a potential detail to find a match in your document base.... e.g. 'he attended a festival'
+  <div class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
+      <input v-model="string_for_vector_comparison" placeholder="Enter search query here"
+        class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
+      <button @click="investigation.fetch_vector_comparison_data(this.string_for_vector_comparison)"
+        class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+        Find Comparison
+      </button>
+    </div>
+    {{ investigation.vector_comparison_metadata }} -->
+    <br>
+    <br>
 </template>
 <script>
 import { Network, DataSet } from 'vis-network/standalone/umd/vis-network.min.js';
@@ -186,6 +239,8 @@ export default {
   },
   data() {
     return {
+      document_record_metadata: 0,
+      string_for_vector_comparison: null,
       diagram_entities: [
         { name: "test", id: 1 },
       ],
@@ -200,7 +255,7 @@ export default {
       // diagram_entities: [{ "label": "GPE", "name": "Tenerife" },
       // { "label": "PERSON", "name": "Jay Slater" },
       // { "label": "DATE", "name": "19-year-old" }],
-      target_url: "https://www.telegraph.co.uk/world-news/2024/06/24/jay-slater-missing-update-parents-release-cctv-tenerife/",
+      search_target: "https://www.telegraph.co.uk/world-news/2024/06/24/jay-slater-missing-update-parents-release-cctv-tenerife/",
       highlighted_text: null,
       selected_text: null,
       youtube_url: null,
@@ -216,6 +271,10 @@ export default {
     //console.log(">>>", this.$refs.chunk_container)
   },
   methods: {
+    async request_document_records() {
+      this.document_record_metadata = await this.investigation.get_document_records()
+      console.log(this.document_record_metadata)
+    },
     render_network() {
       console.log("build network")
       const nodes = [];

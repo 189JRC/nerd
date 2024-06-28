@@ -47,17 +47,14 @@ def fetch_article(url):
             article_text.append(paragraph.get_text())
 
         full_text = "\n".join(article_text)
-        # TODO:3: maybe return article in paragraph banches here. could also be a job for js object in frontend
-        full_text = investigation.chunk_text(full_text)
-        print(type(full_text))
         return full_text
 
     except:
         return f"Error occurred in fetch_article()"
 
 
-@app.route("/scrape", methods=["POST"])
-def scrape():
+@app.route("/triage_request", methods=["POST"])
+def triage_request():
     
     try:
         data = request.json
@@ -66,18 +63,25 @@ def scrape():
     except:
         pass
     
-    if not url:
-        return jsonify({"error": "URL is required"}), 400
-    
     if type_of_scrape == "youtube_transcript":
         # extract video id
         # standard url string format == https://www.youtube.com/watch?v=RIWfH3iEgXU
         _, video_id = url.split("watch?v=")
         # TODO:2: make all endpoint error handling uniform
-        article_text = youtube_transcript_scraper(video_id)
+        transcript_text = youtube_transcript_scraper(video_id)
+        chunked_text = investigation.chunk_text(transcript_text, text_origin="transcript")
+        print(type(chunked_text))
 
     elif type_of_scrape == "article":
-        article_text = fetch_article(url)
+        full_text = fetch_article(url)
+        # TODO:3: maybe return article in paragraph banches here. could also be a job for js object in frontend
+        chunked_text = investigation.chunk_text(full_text, text_origin="article")
+        print(type(chunked_text))
+
+    elif type_of_scrape == "vector_search":
+        string_for_vector_comparison = data.get("string_for_vector_comparison")
+        vector_similarity_dict = calculate_vector_similarity(string_for_vector_comparison)
+        return jsonify(vector_similarity_dict)
 
     elif type_of_scrape == "twitter":
         return jsonify({"article_text": "UNDER CONSTRUCTION"})
@@ -86,7 +90,7 @@ def scrape():
         print("no target for scrape specified.")
         return jsonify({"article_text": "UNDER CONSTRUCTION"})
 
-    return jsonify({"article_text": article_text})
+    return jsonify({"article_text": chunked_text})
 
 
 @app.route("/process", methods=["POST"])
@@ -124,6 +128,36 @@ def youtube_transcript_scraper(video_id):
     except Exception as error:
         print(f"Error retrieving transcript for video {video_id}: {error}")
         return None
+
+@app.route("/get_document_records", methods=['GET'])
+def get_document_record():
+    """Returns all processed documents (spaCy Doc objects) from the investigation"""
+    doc_objects = investigation.processed_documents
+    doc_object_metadata = []
+    for doc_object in doc_objects:
+        doc_object_metadata.append(doc_object._.metadata)
+
+    return jsonify(doc_object_metadata)
+
+# @app.route("/vector_similarity", methods=["POST"])
+def calculate_vector_similarity(string_for_vector_comparison):
+
+    best_doc, vector_similarity_data = investigation.investigate_vector_similarity(string_for_vector_comparison=string_for_vector_comparison)
+    most_similar_span = vector_similarity_data['most_similar_span']
+    highest_similarity = str(float(vector_similarity_data['highest_similarity'])) #can not serialise from float 32> therefore turned into int
+    best_doc_text = best_doc.text
+    best_doc_metadata = best_doc._.metadata
+    top_most_similar = vector_similarity_data['top_most_similar']
+    
+
+    return_dict = dict(
+    most_similar_span=most_similar_span,
+    highest_similarity=highest_similarity,
+    best_doc_metadata=best_doc_metadata,
+    best_doc_text=best_doc_text,
+    top_most_similar=top_most_similar)
+
+    return return_dict
 
 # Following functions are boilerplate for db CRUD
 # @app.route("/")

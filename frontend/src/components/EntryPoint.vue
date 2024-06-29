@@ -1,9 +1,6 @@
 <template>
   <div>
-    <!-- <textarea v-model="text" placeholder="Enter text here..." class="block appearance-none w-full h-64 bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 rounded shadow leading-tight focus:outline-none focus:shadow-outline mb-4"></textarea>
-    <br> -->
-    {{ type_of_scrape }}
-    <div class="w-2/5 mx-auto bg-white p-6 rounded-lg shadow-md">
+    <div id="radio-button-container" class="w-2/5 mx-auto bg-white p-6 rounded-lg shadow-md">
 
       <div class="flex justify-center">
         <input id="option1" name="options" type="radio" value="article" v-model="type_of_scrape"
@@ -17,43 +14,44 @@
         <input id="option3" name="options" type="radio" value="twitter" v-model="type_of_scrape"
           class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
         <label for="option3" class="ml-2 mr-2 block text-gray-700">Twitter</label>
-        
+
         <input id="option3" name="options" type="radio" value="vector_search" v-model="type_of_scrape"
           class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
         <label for="option3" class="ml-2 mr-2 block text-gray-700">Document Vector Search</label>
+
+        <!--NOTE: Consider adding another option to enter raw text-->
       </div>
-      <!-- <div class="mt-4 text-center">
-        <p>Selected Option: {{ data_source_option }}</p>
-      </div> -->
-    </div>
-{{ string_for_vector_comparison }}
-    <div v-if="type_of_scrape=='vector_search'" class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
-      <input v-model="string_for_vector_comparison" placeholder="Enter search query here"
-        class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
-      <button   @click="investigation.fetch_text_data(this.search_target=null, this.type_of_scrape, this.string_for_vector_comparison)"  
-        class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
-        <!--//@click="investigation.fetch_vector_comparison_data(this.string_for_vector_comparison)"-->
-        Find Comparison
-      </button>
     </div>
 
-    <div v-else-if="type_of_scrape!=='vector_search'" class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
-      <input v-model="search_target" placeholder="Enter URL or search query here"
-        class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
-      <button @click="investigation.fetch_text_data(this.search_target, this.type_of_scrape)"
-        class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
-        Fetch/search
-      </button>
-      <!--USE SVG TO GUIDE USER-->
-      <!-- <svg height="100" width="100" >
+    <div id="search-box-container" class="mb-5">
+      <div v-if="type_of_scrape == 'vector_search'"
+        class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
+        <input v-model="string_for_vector_comparison" placeholder="Enter search query here"
+          class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
+        <button @click="handle_search_request"
+          class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+          <!--//@click="investigation.fetch_vector_comparison_data(this.string_for_vector_comparison)"-->
+          Find Comparison
+        </button>
+      </div>
+
+      <div v-else-if="type_of_scrape !== 'vector_search'"
+        class="flex items-center mt-5 p-4 w-2/5  mx-auto dark:bg-white rounded-l shadow-md">
+        <input v-model="search_target" placeholder="Enter URL or search query here"
+          class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
+        <button @click="investigation.fetch_text_data(this.search_target, this.type_of_scrape)"
+          class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+          Fetch/search
+        </button>
+        <!--NOTE: Could provide svg images in sequence to guide user through process-->
+        <!-- <svg height="100" width="100" >
         <circle cx="50" cy="50" r="20" stroke="black" stroke-width="1" fill="none"/>
       </svg> -->
+      </div>
     </div>
 
 
-    <br>
-    <hr>
-  
+
 
     <div class="flex justify-center">
       <button class="bg-blue-300 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
@@ -73,21 +71,29 @@
   <hr>
   <br>
 
-  <div v-if="type_of_scrape=='vector_search'" ref="highlighted_text_container" @mouseup="handle_mouse_selection" class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
+  <div v-if="type_of_scrape == 'vector_search'" ref="highlighted_text_container" @mouseup="handle_mouse_selection"
+    class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
     <!-- <h1 class="text-dark-grey text-2xl">VECTOR SEARCH</h1>
     <button @click="request_document_records()"
       class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
       get docs
     </button> {{ document_record_metadata }}
     Enter a potential detail to find a match in your document base.... e.g. 'he attended a festival'}-->
-    <div ref="chunk_container">
-    {{  }}
-    
-      <li v-for="(value, key) in investigation.vector_comparison_metadata" :key="key">
+    <div ref="chunk_container" v-html="investigation.current_chunk">
+
+    </div>
+    <!-- {{  }}
+      <li v-for="result in investigation.vector_comparison_metadata.top_most_similar">
+        <p><strong>TEXT</strong>{{ result.doc }}</p>
+        <p><strong>Similarity score</strong>{{ result.similarity }}</p>
+        <p><strong>Sentence match</strong>{{ result.sentence }}</p>
+        <p><strong>Document Source:</strong>{{ result.doc_metadata.source }}</p>
+      </li> -->
+
+    <!-- <li v-for="(value, key) in investigation.vector_comparison_metadata" :key="key">
         <strong>{{ key }}:</strong> {{ value }}
-      </li>
-    </div>
-    </div>
+      </li> -->
+  </div>
 
   <div v-else ref="highlighted_text_container" @mouseup="handle_mouse_selection"
     class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
@@ -121,7 +127,7 @@
   </div>
 
   <!--DEBUG-->
-  <div class="flex">
+  <!-- <div class="flex">
     <div class="mt-5 p-4 max-w-md mx-auto dark:bg-gray-200 rounded-l shadow-md">
       <h1 class="text-3xl">DEBUG</h1>
       <h5 class="text-dark-grey text-2xl">All entities</h5>
@@ -149,7 +155,7 @@
 
       </ul>
     </div>
-  </div>
+  </div> -->
 
 
   <div class="flex">
@@ -180,9 +186,9 @@
       </div>
     </div>
     <div id="network" class="w-4/5 h-500 border border-blue-500 rounded mx-auto my-4"
-    style="height: 500px; width: 1000px">
-  </div>
-  <div class="mt-5 p-4 w-[400px] mx-auto dark:bg-gray-200 rounded-xl  pl-5 pb-5 pr-5  shadow-md">
+      style="height: 500px; width: 1000px">
+    </div>
+    <div class="mt-5 p-4 w-[400px] mx-auto dark:bg-gray-200 rounded-xl  pl-5 pb-5 pr-5  shadow-md">
       <h5 class="text-dark-grey text-2xl">Diagram entities</h5>
       <div class="col-3">
         <draggable class="list-group" :list="diagram_entities" group="people" itemKey="name">
@@ -199,24 +205,8 @@
     </div>
   </div>
   <br>
-  <!-- <h1 class="text-dark-grey text-2xl">VECTOR SEARCH</h1>
-  <button @click="request_document_records()"
-        class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
-        get docs
-      </button>
-      {{ document_record_metadata }}
-  Enter a potential detail to find a match in your document base.... e.g. 'he attended a festival'
-  <div class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
-      <input v-model="string_for_vector_comparison" placeholder="Enter search query here"
-        class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
-      <button @click="investigation.fetch_vector_comparison_data(this.string_for_vector_comparison)"
-        class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
-        Find Comparison
-      </button>
-    </div>
-    {{ investigation.vector_comparison_metadata }} -->
-    <br>
-    <br>
+  <br>
+  <br>
 </template>
 <script>
 import { Network, DataSet } from 'vis-network/standalone/umd/vis-network.min.js';
@@ -271,6 +261,17 @@ export default {
     //console.log(">>>", this.$refs.chunk_container)
   },
   methods: {
+    async handle_search_request() {
+      console.log("GOOD")
+      await this.investigation.fetch_text_data(this.search_target = null, this.type_of_scrape, this.string_for_vector_comparison)
+      if (this.type_of_scrape === "vector_search") {
+        this.investigation.text_chunks = this.investigation.vector_comparison_metadata.top_most_similar
+        console.log(this.investigation.vector_comparison_metadata.top_most_similar)
+        const chunk = [this.investigation.vector_comparison_metadata.top_most_similar[0].similarity, this.investigation.vector_comparison_metadata.top_most_similar[0].doc,
+        this.investigation.vector_comparison_metadata.top_most_similar[0].similarity]
+        this.investigation.current_chunk = chunk
+      }
+    },
     async request_document_records() {
       this.document_record_metadata = await this.investigation.get_document_records()
       console.log(this.document_record_metadata)

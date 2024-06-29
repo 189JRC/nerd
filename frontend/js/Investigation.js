@@ -40,8 +40,8 @@ class Investigation {
         this.text_chunks = ""
     }
     async fetch_text_data(target_url, type_of_scrape, string_to_vectorise=null) {
-        console.log("fetch_text_data called on:", target_url)
-        console.log("type of scrape: ", type_of_scrape)
+        // console.log("fetch_text_data called on:", target_url)
+        // console.log("type of scrape: ", type_of_scrape)
         this.reset_state()
         if (string_to_vectorise == null) {
           var body = JSON.stringify({ url: target_url, type_of_scrape: type_of_scrape })
@@ -49,7 +49,7 @@ class Investigation {
           var body = JSON.stringify({ url: null, type_of_scrape: type_of_scrape, string_for_vector_comparison: string_to_vectorise, params: "none yet" })
         }
         try {
-            console.log("origin==", this.domain_origin)
+            
             const response = await fetch(`${this.domain_origin}/triage_request`, {
                 method: 'POST',
                 headers: {
@@ -66,14 +66,15 @@ class Investigation {
 
             if (string_to_vectorise == null) {
             const data = await response.json();
-            console.log(">", typeof (data.article_text))
+            
             // article text is now a list of
             this.text_chunks = data.article_text;
             this.current_chunk = this.text_chunks[0]
             } else if (string_to_vectorise != null) {
               const vector_comparison_metadata = await response.json();
               this.vector_comparison_metadata = vector_comparison_metadata;
-              console.log(this.vector_comparison_metadata)
+              console.log(typeof(this.vector_comparison_metadata))
+              console.log(this.vector_comparison_metadata.top_most_similar)
             }
 
         } catch (error) {

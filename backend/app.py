@@ -6,12 +6,16 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from Investigation import Investigation
+from deepmultilingualpunctuation import PunctuationModel
+
 app = Flask(__name__)
 
 #CORS(app) # TODO:2: Restrict CORS only to frontend URL
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 investigation = Investigation(model="spacy_en_sm")
+
+punctuation_model = PunctuationModel()
 # db connection
 # TODO:2 make sample config.env. put this in it!
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://osint:osint@localhost:5432/osint"
@@ -19,11 +23,16 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 
+
 # TODO:3 make model schema in models.py
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
     password = db.Column(db.String(100), nullable=False)
+
+def punctuate_transcript(transcript):
+    result = punctuation_model.restore_punctuation(transcript)
+    return result
 
 def fetch_article(url):
     """sends a get request to the url string provided as argument.
@@ -69,6 +78,8 @@ def triage_request():
         _, video_id = url.split("watch?v=")
         # TODO:2: make all endpoint error handling uniform
         transcript_text = youtube_transcript_scraper(video_id)
+        transcript_text = punctuate_transcript(transcript_text)
+        print(transcript_text)
         chunked_text = investigation.chunk_text(transcript_text, text_origin="transcript")
         print(type(chunked_text))
 

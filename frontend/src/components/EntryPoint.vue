@@ -3,19 +3,19 @@
     <div id="radio-button-container" class="w-2/5 mx-auto bg-white p-6 rounded-lg shadow-md">
 
       <div class="flex justify-center">
-        <input id="option1" name="options" type="radio" value="article" v-model="type_of_scrape"
+        <input id="option1" name="options" type="radio" value="article" v-model="desired_action"
           class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
         <label for="option1" class="ml-2 mr-2 block text-gray-700">Article</label>
 
-        <input id="option2" name="options" type="radio" value="youtube_transcript" v-model="type_of_scrape"
+        <input id="option2" name="options" type="radio" value="youtube_transcript" v-model="desired_action"
           class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
         <label for="option2" class="ml-2 mr-2 block text-gray-700">YouTube Transcript</label>
 
-        <input id="option3" name="options" type="radio" value="twitter" v-model="type_of_scrape"
+        <input id="option3" name="options" type="radio" value="twitter" v-model="desired_action"
           class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
         <label for="option3" class="ml-2 mr-2 block text-gray-700">Twitter</label>
 
-        <input id="option3" name="options" type="radio" value="vector_search" v-model="type_of_scrape"
+        <input id="option3" name="options" type="radio" value="vector_search" v-model="desired_action"
           class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
         <label for="option3" class="ml-2 mr-2 block text-gray-700">Document Vector Search</label>
 
@@ -24,7 +24,7 @@
     </div>
 
     <div id="search-box-container" class="mb-5">
-      <div v-if="type_of_scrape == 'vector_search'"
+      <div v-if="desired_action == 'vector_search'"
         class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
         <input v-model="string_for_vector_comparison" placeholder="Enter search query here"
           class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
@@ -35,11 +35,11 @@
         </button>
       </div>
 
-      <div v-else-if="type_of_scrape !== 'vector_search'"
+      <div v-else-if="desired_action !== 'vector_search'"
         class="flex items-center mt-5 p-4 w-2/5  mx-auto dark:bg-white rounded-l shadow-md">
         <input v-model="search_target" placeholder="Enter URL or search query here"
           class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
-        <button @click="investigation.fetch_text_data(this.search_target, this.type_of_scrape)"
+        <button @click="handle_search_request"
           class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
           Fetch/search
         </button>
@@ -71,7 +71,7 @@
   <hr>
   <br>
 
-  <div v-if="type_of_scrape == 'vector_search'" ref="highlighted_text_container" @mouseup="handle_mouse_selection"
+  <div v-if="desired_action == 'vector_search'" ref="highlighted_text_container" @mouseup="handle_mouse_selection"
     class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
     <!-- <h1 class="text-dark-grey text-2xl">VECTOR SEARCH</h1>
     <button @click="request_document_records()"
@@ -249,7 +249,7 @@ export default {
       highlighted_text: null,
       selected_text: null,
       youtube_url: null,
-      type_of_scrape: "article",
+      desired_action: "article",
       data_source_option: null,
       already_significant: false,
       potential_entity: false,
@@ -262,14 +262,19 @@ export default {
   },
   methods: {
     async handle_search_request() {
-      console.log("GOOD")
-      await this.investigation.fetch_text_data(this.search_target = null, this.type_of_scrape, this.string_for_vector_comparison)
-      if (this.type_of_scrape === "vector_search") {
+      console.log("handle_search_request called")
+      if (this.desired_action === "vector_search") {
+        await this.investigation.fetch_and_process_doc_data(this.search_target = null, this.desired_action, this.string_for_vector_comparison)
+        
         this.investigation.text_chunks = this.investigation.vector_comparison_metadata.top_most_similar
         console.log(this.investigation.vector_comparison_metadata.top_most_similar)
         const chunk = [this.investigation.vector_comparison_metadata.top_most_similar[0].similarity, this.investigation.vector_comparison_metadata.top_most_similar[0].doc,
         this.investigation.vector_comparison_metadata.top_most_similar[0].similarity]
         this.investigation.current_chunk = chunk
+
+      } else {
+        await this.investigation.fetch_and_process_doc_data(this.search_target, this.desired_action)
+
       }
     },
     async request_document_records() {

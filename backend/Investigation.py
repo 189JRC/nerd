@@ -92,55 +92,74 @@ class Investigation:
             # tfbert_model = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english", grouped_entities=True)
             return nlp
 
-    def chunk_text(self, text, text_origin, chunk_size=10):
+    def chunk_text(self, doc, text_type, chunk_size=10):
         """Takes a text that is a list of sentences and formats them into a list of chunks of specified size."""
         #NOTE: Youtube transcripts do not come with punctuation - therefore parsing sentences for chunks will require different technique
         #For now just return full text
-        doc = self.create_doc_object(text)
+        #doc = self.create_doc_object(text)
 
-        if text_origin == 'article':
+        if text_type == 'article':
             sentences = [sent.text for sent in doc.sents]
-            print(len(sentences))
+            print(f"len(sentences) sentences found in text")
             chunks = []
             for index in range(0, len(sentences), chunk_size):
                 chunk = ' '.join(sentences[index:index + chunk_size])
                 chunks.append(chunk)
 
-            print("there are", len(chunks), "chunks")
-        elif text_origin == 'transcript':
+            print("created", len(chunks), "chunks from the document")
+        elif text_type == 'transcript':
             chunks = [text]
         else:
-            print("Problem in chunk_text() method. Cannot determine text_origin")
+            print("Problem in chunk_text() method. Cannot determine text_type")
         return chunks
 
-    def create_doc_object(self, text):
+    def apply_metadata_to_doc(self, doc, metadata_label, metadata_value):
+        """Applies metadata to a document. Currently the only metadata is 'origin' set to the origin url"""
+        doc.set_extension('origin', default=None, force=True)
+        doc._.origin = metadata_value 
+        return doc
+
+
+    def create_doc_object(self, text, metadata_label=False, metadata_value=False):
+        """Creates a doc object from a sample of text and adds it to the investigation's processed texts.
+        Returns the document object with a metadata dict."""
+        # Metadata could be used to integrate investigation docs into model training data
+        # currently only a document label is stored
         doc = self.nlp(text)
-        self.processed_documents.append(doc)
-        print(f"Created doc object {doc}")
-        print("Number of docs processed:", len(self.processed_documents))
-        return doc 
 
-    def process_text(self, virgin_text, relevant_entities=None):
+        if metadata_label and metadata_value:
+            doc = self.apply_metadata_to_doc(doc, metadata_label, metadata_value)
+            self.processed_documents.append(doc)
+            print(f"added doc {metadata_label}:{metadata_value}... to processed documents in investigation.")
+        else:
+            self.processed_documents.append(doc)
+            print(f"Doc {doc.text[:10]} created with no metadata")
 
-        # process doc with nlp model
-        document_under_investigation = self.nlp(virgin_text)
+        try:
+            # Currently only metadata to label documents is required
+            return doc
+        except:
+            print("Doc has unexpected metadata")
+            return doc, {metadata_label:metadata_value}
+
+    def find_entities(self, doc, relevant_entities=None):
+
+       
         # all pretrained entity types and descriptions: https://github.com/explosion/spaCy/discussions/9147
         if relevant_entities == None:
             relevant_entities = [
                 "PERSON",
                 # "NORP",
-                # "FAC",
-                # "GPE",
-                # "LOC",
-                # "EVENT",
+                "FAC", #facilities
+                # "GPE", #geopolitical entities e.g. states
+                "LOC",
+                "EVENT",
                 # "DATE",
                 # "TIME",
                 # "MONEY",
             ]
         
-        self.apply_matched_patterns(document_under_investigation)
-
-        for ent in document_under_investigation.ents:
+        for ent in doc.ents:
             entity = (ent.text, ent.label_)
             if ent.label_ in relevant_entities:
                 if { "name": ent.text, "label": ent.label_} not in self.entity_texts_and_labels:

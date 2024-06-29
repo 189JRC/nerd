@@ -6,7 +6,7 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from Investigation import Investigation
-from deepmultilingualpunctuation import PunctuationModel
+#from deepmultilingualpunctuation import PunctuationModel
 
 app = Flask(__name__)
 
@@ -15,7 +15,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 investigation = Investigation(model="spacy_en_sm")
 
-punctuation_model = PunctuationModel()
+#punctuation_model = PunctuationModel()
 # db connection
 # TODO:2 make sample config.env. put this in it!
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://osint:osint@localhost:5432/osint"
@@ -39,7 +39,7 @@ def fetch_article(url):
     processes response to filter out the html and returns the article text content"""
     try:
         response = requests.get(url)
-        response.raise_for_status()  # will return HTTPError obj if req not successful
+        response.raise_for_status()  
 
         soup = BeautifulSoup(
             response.content, "html.parser"
@@ -59,20 +59,21 @@ def fetch_article(url):
         return full_text
 
     except:
-        return f"Error occurred in fetch_article()"
+        return f"Error occurred in fetch_article() for {url}"
 
 
-@app.route("/triage_request", methods=["POST"])
-def triage_request():
-    
+@app.route("/fetch_and_process_doc_data", methods=["POST"])
+def fetch_and_process_doc_data():
+    """ Receives a fetch request, triages it according to user intention, then triggers operations to process the text.
+    Returns text chunks as a list of dicts with metadata"""
     try:
         data = request.json
         url = data.get("url")
-        type_of_scrape = data.get("type_of_scrape")
+        desired_action = data.get("desired_action")
     except:
         pass
     
-    if type_of_scrape == "youtube_transcript":
+    if desired_action == "youtube_transcript":
         # extract video id
         # standard url string format == https://www.youtube.com/watch?v=RIWfH3iEgXU
         _, video_id = url.split("watch?v=")
@@ -80,39 +81,49 @@ def triage_request():
         transcript_text = youtube_transcript_scraper(video_id)
         transcript_text = punctuate_transcript(transcript_text)
         print(transcript_text)
-        chunked_text = investigation.chunk_text(transcript_text, text_origin="transcript")
-        print(type(chunked_text))
+        text_chunks = investigation.chunk_text(transcript_text, text_origin="transcript")
+        print(type(text_chunks))
 
-    elif type_of_scrape == "article":
-        full_text = fetch_article(url)
+    elif desired_action == "article":
+        scraped_text = fetch_article(url)
         # TODO:3: maybe return article in paragraph banches here. could also be a job for js object in frontend
-        chunked_text = investigation.chunk_text(full_text, text_origin="article")
-        print(type(chunked_text))
+        doc = investigation.create_doc_object(scraped_text, metadata_label="origin", metadata_value=url)
+        named_entities = investigation.find_entities(doc)
+        #matched_patterns = investigation.apply_matched_patterns(doc) 
+        text_chunks = investigation.chunk_text(doc, text_type="article")
 
-    elif type_of_scrape == "vector_search":
+    elif desired_action == "vector_search":
         string_for_vector_comparison = data.get("string_for_vector_comparison")
         vector_similarity_dict = calculate_vector_similarity(string_for_vector_comparison)
         return jsonify(vector_similarity_dict)
 
-    elif type_of_scrape == "twitter":
+    elif desired_action == "twitter":
         return jsonify({"article_text": "UNDER CONSTRUCTION"})
 
     else:
         print("no target for scrape specified.")
         return jsonify({"article_text": "UNDER CONSTRUCTION"})
 
-    return jsonify({"article_text": chunked_text})
+    return jsonify({"text_chunks": text_chunks, "named_entities": named_entities})
+    # return jsonify({"article_text": chunked_text, "named_entities": named_entities_dict})
 
 
-@app.route("/process", methods=["POST"])
-def process_text():
+def process_text_into_doc_object(doc, url_for_metadata_label):
     """Uses spaCy pipeline to get named entities from a piece of text.
     Returns a dict of ner strings that were found in text and their respective labels"""
 
-    data = request.json
-    text = data.get("text")
-    entity_text_and_label_dicts = investigation.process_text(text)
+    entity_text_and_label_dicts = investigation.process_text(text_to_process, url_for_metadata_label)
     return entity_text_and_label_dicts
+
+# @app.route("/process", methods=["POST"])
+# def process_text():
+#     """Uses spaCy pipeline to get named entities from a piece of text.
+#     Returns a dict of ner strings that were found in text and their respective labels"""
+
+#     data = request.json
+#     text = data.get("text")
+#     entity_text_and_label_dicts = investigation.process_text(text)
+#     return entity_text_and_label_dicts
 
     
 

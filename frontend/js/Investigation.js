@@ -1,17 +1,15 @@
 
 class Investigation {
     constructor(domain_origin) {
-        console.log("INV CREATED")
         this.domain_origin = domain_origin
         this.investigation = 'investigation'
         this.text_chunks = []
         this.current_chunk = ""
-        this.selected_model = "spacy"
-        this.significant_entities = []
+        //this.significant_entities = []
         this.entities = []
         this.significant_details = []
-        this.vector_comparison_metadata = ["NO DATA"]
-        
+        this.vector_comparison_data = []  
+        this.text_summary = "" 
     }
     async get_document_records() {
       try {
@@ -28,7 +26,7 @@ class Investigation {
           }
   
           const document_record_metadata = await response.json();
-          return document_record_metadata
+          this.document_records = document_record_metadata
           // this.make_significant_entities(data)
   
         } catch (error) {
@@ -67,81 +65,46 @@ class Investigation {
             }
             // set conditional on desired_action not stringtovectorise
             if (string_to_vectorise == null) {
-            const data = await response.json();
-            
-            // article text is now a list of
-            this.text_chunks = data.text_chunks;
-            this.current_chunk = this.text_chunks[0]
-            console.log("!!!", data.text_chunks, data.named_entities)
-            } else if (string_to_vectorise != null) {
               const data = await response.json();
+              
+              // article text is now a list of
+              this.text_chunks = data.text_chunks;
+              this.current_chunk = this.text_chunks[0]
+              this.entities = data.named_entities
+              console.log(data.text_summary)
+              this.text_summary = data.text_summary
+
+              for (let index=0; index<this.entities.length; index++) {
+                if (this.entities[index].label === "PERSON") {
+                  this.entities[index].relevant_details = {}
+                  this.entities[index].relevant_details.locations = []
+                  this.entities[index].relevant_details.details = []
+                }
+              }
+            
+            } else if (string_to_vectorise != null) {
+              const data = await response.json()
+              this.reset_state()
               console.log("!!!", data)
-              // const vector_comparison_metadata = await response.json();
-              // this.vector_comparison_metadata = vector_comparison_metadata;
-              // console.log(typeof(this.vector_comparison_metadata))
-              // console.log(this.vector_comparison_metadata.top_most_similar)
+              console.log(data)
+              // data is object
+              // best_doc_metadata = origin
+              // best_doc_text = full text
+              // highest_similarity
+              // most_similar_span
+              this.vector_comparison_data = data
+       
+              //console.log(this.vector_comparison_metadata.top_most_similar)
             }
 
         } catch (error) {
             console.error('There was a problem with the fetch operation:', error);
         }
     }
-    // async fetch_vector_comparison_data(string_for_vector_comparison) {
-    //   console.log("CALLED fetch_vector_comparison_data")
-    //     try {
-    //       const response = await fetch('http://localhost:5000/vector_similarity', {
-    //         method: 'POST',
-    //         headers: {
-    //           'Content-Type': 'application/json'
-    //         },
-    //         body: JSON.stringify({ string_for_vector_comparison: string_for_vector_comparison, params: "none yet" })
-    //       });
-  
-    //       if (!response.ok) {
-    //         throw new Error('Network response was not ok ' + response.statusText);
-    //       }
-  
-    //       const vector_comparison_metadata = await response.json();
-    //       this.vector_comparison_metadata = vector_comparison_metadata;
-    //       // this.make_significant_entities(data)
-  
-    //     } catch (error) {
-    //       console.error('There was a problem with the fetch. Error:', error);
-    //     }
-
-    // }
-    async process_text_string_with_nlp_model() {
-        console.log("CALLED process_text_string_with_nlp_model")
-        try {
-          const response = await fetch('http://localhost:5000/process', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ text: this.current_chunk, model: this.selected_model })
-          });
-  
-          if (!response.ok) {
-            throw new Error('Network response was not ok ' + response.statusText);
-          }
-  
-          const data = await response.json();
-          this.entities = data;
-          // this.make_significant_entities(data)
-  
-        } catch (error) {
-          console.error('There was a problem with the fetch. Error:', error);
-        }
-      }
     reset_state() {
         this.highlighted_text = ""
         this.text_chunks = ""
     }
-    // make_significant_entities(entity_objects) {
-    //     entity_objects.forEach((entity) => {
-    //       this.significant_entities.push(entity);
-    //     });
-    //   }
 }
 
 export default Investigation

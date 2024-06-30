@@ -1,70 +1,95 @@
 <template>
-  <div>
-    <div id="radio-button-container" class="w-2/5 mx-auto bg-white p-6 rounded-lg shadow-md">
+  <div class="flex justify-center items-center">
+    <div class="w-4/5">
 
-      <div class="flex justify-center">
-        <input id="option1" name="options" type="radio" value="article" v-model="desired_action"
-          class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
-        <label for="option1" class="ml-2 mr-2 block text-gray-700">Article</label>
 
-        <input id="option2" name="options" type="radio" value="youtube_transcript" v-model="desired_action"
-          class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
-        <label for="option2" class="ml-2 mr-2 block text-gray-700">YouTube Transcript</label>
-
-        <input id="option3" name="options" type="radio" value="twitter" v-model="desired_action"
-          class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
-        <label for="option3" class="ml-2 mr-2 block text-gray-700">Twitter</label>
-
-        <input id="option3" name="options" type="radio" value="vector_search" v-model="desired_action"
-          class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
-        <label for="option3" class="ml-2 mr-2 block text-gray-700">Document Vector Search</label>
-
-        <!--NOTE: Consider adding another option to enter raw text-->
-      </div>
-    </div>
-
-    <div id="search-box-container" class="mb-5">
-      <div v-if="desired_action == 'vector_search'"
-        class="flex items-center mt-5 p-4 max-w-lg mx-auto dark:bg-white rounded-l shadow-md">
-        <input v-model="string_for_vector_comparison" placeholder="Enter search query here"
-          class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
-        <button @click="handle_search_request"
-          class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
-          <!--//@click="investigation.fetch_vector_comparison_data(this.string_for_vector_comparison)"-->
-          Find Comparison
-        </button>
+      <!-- Top Header -->
+      <div class="mt-5 p-6 dark:bg-gray-600 rounded-xl shadow-md flex items-center space-x-4">
+        <h1 class="text-white text-4xl">N.E.R.D (Named Entity Recognition Diagramiser)</h1>
       </div>
 
-      <div v-else-if="desired_action !== 'vector_search'"
-        class="flex items-center mt-5 p-4 w-2/5  mx-auto dark:bg-white rounded-l shadow-md">
-        <input v-model="search_target" placeholder="Enter URL or search query here"
-          class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
-        <button @click="handle_search_request"
-          class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
-          Fetch/search
-        </button>
-        <!--NOTE: Could provide svg images in sequence to guide user through process-->
-        <!-- <svg height="100" width="100" >
-        <circle cx="50" cy="50" r="20" stroke="black" stroke-width="1" fill="none"/>
-      </svg> -->
+      <br>
+
+      <!-- Main Content -->
+      <div class="flex">
+        <!-- Left side: Header (Already centered) -->
+        <div class="flex w-full flex-col">
+          <!-- Radio Buttons -->
+
+          <div id="radio-button-container" class="w-full bg-white p-6 rounded-lg shadow-md mt-4">
+            <div class="flex justify-center">
+              <input id="option1" name="options" type="radio" value="article" v-model="desired_action"
+                class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
+              <label for="option1" class="ml-2 mr-2 block text-gray-700">Article Scrape</label>
+
+              <input id="option2" name="options" type="radio" value="youtube_transcript" v-model="desired_action"
+                class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
+              <label for="option2" class="ml-2 mr-2 block text-gray-700">YouTube Transcript</label>
+
+              <!-- <input id="option3" name="options" type="radio" value="twitter" v-model="desired_action"
+              class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
+            <label for="option3" class="ml-2 mr-2 block text-gray-700">Twitter</label> -->
+
+              <input id="option4" name="options" type="radio" value="vector_search" v-model="desired_action"
+                class="form-radio h-4 w-4 text-blue-600 transition duration-150 ease-in-out" />
+              <label for="option4" class="ml-2 mr-2 block text-gray-700">Document Vector Search</label>
+            </div>
+          </div>
+
+
+          <!-- Search Box -->
+          <div id="search-box-container" class="mb-5">
+            <div v-if="desired_action == 'vector_search'"
+              class="flex items-center mt-5 p-4 w-4/5 mx-auto dark:bg-white rounded-l shadow-md">
+              <input v-model="string_for_vector_comparison" placeholder="Enter search query here"
+                class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
+              <button @click="fetch_and_process_doc_data"
+                class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+                Find Comparison
+              </button>
+            </div>
+
+            <div v-else-if="desired_action !== 'vector_search'"
+              class="flex items-center mt-5 p-4 w-4/5 mx-auto dark:bg-white rounded-l shadow-md">
+              <input v-model="search_target" placeholder="Enter URL or search query here"
+                class="flex-grow p-3 rounded-l-lg border border-gray-300 focus:outline-none focus:border-blue-500" />
+              <button @click="fetch_and_process_doc_data"
+                class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+                Fetch and Process
+              </button>
+              <select id="options" @click="get_document_records" name="options"
+                class="ml-2 px-4 py-3 h-[48px] bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
+                <option value="">Document Records</option>
+                <option v-for="record in investigation.document_records" value="option1">{{ record.substring(0, 30) }}
+                </option>
+              </select>
+            </div>
+
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex justify-center">
+
+
+
+
+            <button class="bg-blue-200 hover:bg-blue-300 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+              @click="investigation.process_text_string_with_nlp_model">View Document Record</button>
+
+            <button class="bg-blue-300 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+              @click="investigation.process_text_string_with_nlp_model">Process Text</button>
+
+            <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+              @click="highlightText">Highlight Text</button>
+
+            <button class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+              @click="build_network">Build Network</button>
+
+            <button class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+              @click="unhighlight_text">Unhighlight Text</button>
+          </div>
+        </div>
       </div>
-    </div>
-
-
-
-
-    <div class="flex justify-center">
-      <button class="bg-blue-300 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
-        @click="investigation.process_text_string_with_nlp_model">Process Text</button>
-
-      <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
-        @click="highlightText">highlight text</button>
-
-      <button class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
-        @click="render_network">build
-        network</button>
-      <button class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
-        @click="unhighlight_text">unhighlight text</button>
     </div>
   </div>
   <br>
@@ -72,36 +97,42 @@
   <br>
 
   <div v-if="desired_action == 'vector_search'" ref="highlighted_text_container" @mouseup="handle_mouse_selection"
-    class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
+    class="relative isolate w-4/5 h-[325px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
     <!-- <h1 class="text-dark-grey text-2xl">VECTOR SEARCH</h1>
     <button @click="request_document_records()"
       class="ml-2 px-4 py-3 bg-blue-500 text-white rounded-r-lg hover:bg-blue-700 focus:outline-none">
       get docs
     </button> {{ document_record_metadata }}
     Enter a potential detail to find a match in your document base.... e.g. 'he attended a festival'}-->
-    <div ref="chunk_container" v-html="investigation.current_chunk">
 
+    <div ref="chunk_container" v-html="investigation.current_chunk"></div>
+    <!-- <div v-if="search_complete">
+      <p><strong>TEXT</strong>{{ investigation.current_chunk.doc }}</p>
+      <p><strong>TITLE:</strong>{{ investigation.current_chunk.doc_metadata }}</p>
+        <p><strong>SENTENCE:</strong>{{ investigation.current_chunk.sentence }}</p>
+          <p><strong>SIMILARITY:</strong>{{ investigation.current_chunk.similarity }}</p>
+        </div> -->
+
+    <div class="absolute bottom-0 left-0 w-full flex justify-between items-center bg-white p-4">
+      <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+        @click="see_previous_chunk">
+        < </button>{{ chunk_index + 1 }} / {{ this.investigation.text_chunks.length }}
+
+          <!-- <button class="bg-blue-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+            @click="highlightText">view full text</button> -->
+          <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
+            @click="see_next_chunk">></button>
     </div>
-    <!-- {{  }}
-      <li v-for="result in investigation.vector_comparison_metadata.top_most_similar">
-        <p><strong>TEXT</strong>{{ result.doc }}</p>
-        <p><strong>Similarity score</strong>{{ result.similarity }}</p>
-        <p><strong>Sentence match</strong>{{ result.sentence }}</p>
-        <p><strong>Document Source:</strong>{{ result.doc_metadata.source }}</p>
-      </li> -->
-
-    <!-- <li v-for="(value, key) in investigation.vector_comparison_metadata" :key="key">
-        <strong>{{ key }}:</strong> {{ value }}
-      </li> -->
   </div>
 
   <div v-else ref="highlighted_text_container" @mouseup="handle_mouse_selection"
-    class="relative isolate w-4/5 h-[300px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
+    class="relative isolate w-4/5 h-[325px] rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
     <br>
-
+    <div
+      class="relative isolate w-4/5 h-[65px] rounded-xl pl-5 pb-7 pt-2 pr-5 mb-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
+      <strong>Text Summary:</strong> {{ investigation.text_summary }}
+    </div>
     <div ref="chunk_container" v-html="investigation.current_chunk">
-
-
     </div>
     <div class="absolute bottom-0 left-0 w-full flex justify-between items-center bg-white p-4">
       <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-5 p-4 justify-center"
@@ -125,82 +156,106 @@
       Detail?</button><br>
     <button v-if="already_significant" class="bg-orange-500" @click="make_insignificant">Not significant?</button>
   </div>
+  <br>
 
-  <!--DEBUG-->
-  <!-- <div class="flex">
-    <div class="mt-5 p-4 max-w-md mx-auto dark:bg-gray-200 rounded-l shadow-md">
-      <h1 class="text-3xl">DEBUG</h1>
+  <div class="flex relative isolate w-4/5 rounded-xl pl-5 pb-5 pr-5 bg-white shadow-lg ring-1 mx-auto overflow-auto">
+    <div class="mt-5 p-4 w-1/5 mx-auto dark:bg-gray-200 rounded-xl pl-5 pb-5 pr-5 shadow-md">
       <h5 class="text-dark-grey text-2xl">All entities</h5>
-      <ul>
-        <li v-for="entity in investigation.entities" :key="entity.text">
-          {{ entity }}
-        </li>
-      </ul>
-    </div>
-    <div class="mt-5 p-4 max-w-md mx-auto dark:bg-gray-200 rounded-l shadow-md">
-      <h5 class="text-dark-grey text-2xl">Significant Details</h5>
-      <ul>
-        <li v-for="significant_detail in investigation.significant_details" :key="significant_detail.text">
-          {{ significant_detail }}
-        </li>
-      </ul>
-    </div>
-    <div class="mt-5 p-4 max-w-md mx-auto dark:bg-gray-200 rounded-l shadow-md">
-      <h5 class="text-dark-grey text-2xl">Diagram Entities</h5>
-
-      <ul>
-        <li v-for="diagram_entity in diagram_entities" :key="diagram_entity.text">
-          {{ diagram_entity }}
-        </li>
-
-      </ul>
-    </div>
-  </div> -->
-
-
-  <div class="flex">
-    <div class="mt-5 p-4 w-[400px] mx-auto dark:bg-gray-200 rounded-xl pl-5 pb-5 pr-5 shadow-md">
-      <h5 class="text-dark-grey text-2xl">All entities</h5>
+      {{ investigation.entities }}
       <div class="col-3">
         <draggable class="list-group" :list="investigation.entities" group="people" itemKey="name">
           <template #item="{ element, index }">
+            
             <div v-if="element.label == 'PERSON'"
-              class="list-group-item mb-1 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
-              {{ element.name }} {{ index }} {{ element.label }}</div>
+              class="flex list-group-item mb-1 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+              {{ element.name }}  {{ element.label }}</div>
             <div v-else
               class="list-group-item mb-1 bg-blue-300 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
-              {{ element.name }} {{ index }} {{ element.label }}</div>
+              {{ element.name }}  {{ element.label }}</div>
           </template>
         </draggable>
         <h5 class="text-dark-grey text-2xl">All details</h5>
+        {{ investigation.significant_details }}
         <draggable class="list-group" :list="investigation.significant_details" group="people" itemKey="name">
           <template #item="{ element, index }">
             <div v-if="element.label == 'SIGNIFICANT'"
               class="list-group-item mb-1 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
-              {{ element.name }} {{ index }} {{ element.label }}</div>
+              {{ element.name }} {{ element.label }}</div>
             <div v-else
               class="list-group-item mb-1 bg-blue-300 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
-              {{ element.name }} {{ index }} {{ element.label }}</div>
+              {{ element.name }} {{ element.label }}</div>
           </template>
         </draggable>
+
       </div>
     </div>
-    <div id="network" class="w-4/5 h-500 border border-blue-500 rounded mx-auto my-4"
+    <div id="network" class="w-4/5 h-500 border mt-10 border-blue-500 rounded mx-auto my-4"
       style="height: 500px; width: 1000px">
     </div>
-    <div class="mt-5 p-4 w-[400px] mx-auto dark:bg-gray-200 rounded-xl  pl-5 pb-5 pr-5  shadow-md">
+
+    <div class="mt-5 p-4 w-1/5  mx-auto dark:bg-gray-200 rounded-xl  pl-5 pb-5 pr-5  shadow-md">
       <h5 class="text-dark-grey text-2xl">Diagram entities</h5>
+      {{ diagram_entities }}
       <div class="col-3">
+
+
+
         <draggable class="list-group" :list="diagram_entities" group="people" itemKey="name">
           <template #item="{ element, index }">
-            <div v-if="element.label == 'PERSON'"
-              class="list-group-item mb-1 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
-              {{ element.name }} {{ index }} {{ element.label }}</div>
+           
+            <div v-if="element.label == 'PERSON' || element.label == 'IDENTIFIED PERSON'"
+              class="list-group-item mb-1 bg-blue-500 text-black px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+              {{ element.name }} {{ element.label }}
+              <div>Locations:</div>
+
+
+              <div class="dark:bg-gray-200 rounded-xl ">
+                {{ element.name }}
+
+                <draggable @change="update_network_data(element.name, 'location', $event)"
+                  v-if="element.label == 'PERSON' || element.label == 'IDENTIFIED PERSON'" class="list-group" :list="element.relevant_details.locations"
+                  group="people" itemKey="name">
+                  <template #item="{ element, index }">
+                    <div 
+                      class="mt-2 bg-blue-300 text-black px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+                      {{ element.name }} </div>
+
+                  </template>
+                </draggable>
+
+
+                <br>
+                <br>
+              </div>
+              <div>Relevant details:</div>
+
+
+              <div class="dark:bg-gray-200 rounded-xl ">
+                {{ element.name }}
+
+                <draggable @change="update_network_data(element.name, 'relevant_details', $event)"
+                  v-if="element.label == 'PERSON' || element.label == 'IDENTIFIED PERSON'" class="list-group" :list="element.relevant_details.details"
+                  group="people" itemKey="name">
+                  <template #item="{ element, index }">
+                    <div
+                      class="mt-2 bg-blue-300 text-black px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
+                      {{ element.name }} </div>
+
+                  </template>
+                </draggable>
+
+
+                <br>
+                <br>
+              </div>
+            </div>
             <div v-else
               class="list-group-item mb-1 bg-blue-300 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-700 cursor-pointer">
               {{ element.name }} {{ index }} {{ element.label }}</div>
           </template>
         </draggable>
+
+       
       </div>
     </div>
   </div>
@@ -215,9 +270,6 @@ import draggable from 'vuedraggable'
 //import nestedDraggable from "./infra/nested";
 
 export default {
-  name: "two-lists",
-  display: "Three Lists",
-  order: 1,
   components: {
     draggable,
   },
@@ -229,15 +281,23 @@ export default {
   },
   data() {
     return {
+      search_complete: false,
+      show: "NONE",
+      temp_relevant_details_drag: [
+        {
+          name: "placeholder"
+        },
+        {
+          name: "placeholder2"
+        }
+      ],
+      temp_locations_drag: [],
       document_record_metadata: 0,
       string_for_vector_comparison: null,
       diagram_entities: [
-        { name: "test", id: 1 },
-      ],
-      list2: [
-        { name: "Juan", id: 5 },
-        { name: "Edgard", id: 6 },
-        { name: "Johnson", id: 7 }
+        {
+          name: "Drag entities here",
+        },
       ],
       chunk_index: 0,
       show_popup: false,
@@ -245,7 +305,7 @@ export default {
       // diagram_entities: [{ "label": "GPE", "name": "Tenerife" },
       // { "label": "PERSON", "name": "Jay Slater" },
       // { "label": "DATE", "name": "19-year-old" }],
-      search_target: "https://www.telegraph.co.uk/world-news/2024/06/24/jay-slater-missing-update-parents-release-cctv-tenerife/",
+      search_target: null,
       highlighted_text: null,
       selected_text: null,
       youtube_url: null,
@@ -256,66 +316,143 @@ export default {
       potential_detail: false
     };
   },
+  watch: {
+    test_drag: {
+      handler(newVal) {
+        // Update the relevant details in diagram_entities based on changes in test_drag
+        //this.updateDiagramEntities();
+      },
+      deep: true,
+    },
+  },
   updated() {
     this.add_event_listeners_for_highlighting();
     //console.log(">>>", this.$refs.chunk_container)
   },
   methods: {
-    async handle_search_request() {
-      console.log("handle_search_request called")
+    update_network_data(name, entry_point, event) {
+
+      const parent = this.diagram_entities.find(entity => entity.name === name);
+
+      // if (parent) {
+      //   const dragged_entity_object = event.added ? event.added.element : 0;
+      //   if (entry_point == 'location') {
+
+      //   parent.relevant_details.locations.push(dragged_entity_object)
+      //   } else if (entry_point == 'relevant_details') {
+
+      //     parent.relevant_details.details.push(dragged_entity_object)
+      //   }
+      // }
+    },
+    // log(event) {
+    //   console.log(event.target)
+
+    // },
+    add(e) {
+      console.log("add", e.target)
+    },
+    async fetch_and_process_doc_data() {
+      console.log("fetch_and_process_doc_data called in component")
       if (this.desired_action === "vector_search") {
         await this.investigation.fetch_and_process_doc_data(this.search_target = null, this.desired_action, this.string_for_vector_comparison)
-        
-        this.investigation.text_chunks = this.investigation.vector_comparison_metadata.top_most_similar
-        console.log(this.investigation.vector_comparison_metadata.top_most_similar)
-        const chunk = [this.investigation.vector_comparison_metadata.top_most_similar[0].similarity, this.investigation.vector_comparison_metadata.top_most_similar[0].doc,
-        this.investigation.vector_comparison_metadata.top_most_similar[0].similarity]
-        this.investigation.current_chunk = chunk
+
+        //this is a bit hacky...
+        //alternative would be to process template in back end which doesn't seem right
+        //the issue is the html formatting with highlight/unhighlight
+        this.format_vector_search_responses_for_display()
+        //this.investigation.text_chunks = this.investigation.vector_comparison_data.top_most_similar
+        // console.log(this.investigation.vector_comparison_metadata.top_most_similar)
+        const chunk = [this.investigation.vector_comparison_data.top_most_similar[0]]
+        // const this.investigation.vector_comparison_metadata.top_most_similar[0].similarity]
+
+        // this.investigation.current_chunk = chunk
+        // this.investigation.text_chunks = this.investigation.vector_comparison_data.top_most_similar
+        // console.log(chunk)
+        this.search_complete = true
 
       } else {
         await this.investigation.fetch_and_process_doc_data(this.search_target, this.desired_action)
 
       }
     },
-    async request_document_records() {
+    format_vector_search_responses_for_display() {
+      this.investigation.text_chunks = []
+      for (let index = 0; index < 10; index++) {
+        //each chunk is a js object with .text .similarity .title .sentence
+        //need to make it into html
+        //const chunk = this.investigation.vector_comparison_data.top_most_similar[index]
+        console.log(this.investigation.vector_comparison_data.top_most_similar[index].similarity)
+
+
+
+        var chunk_html =
+          `<p><strong>Similarity Score: </strong>${this.investigation.vector_comparison_data.top_most_similar[index].similarity}</p>
+        <p><strong>Document Origin: </strong>${this.investigation.vector_comparison_data.top_most_similar[index].doc_metadata}</p>
+        <p><strong>String match: </strong>${this.investigation.vector_comparison_data.top_most_similar[index].sentence}</p>
+        <p><strong>Text: </strong>${this.investigation.vector_comparison_data.top_most_similar[index].doc.substring(0, 1000)}</p>`
+
+
+        this.investigation.text_chunks.push(
+          chunk_html
+
+        )
+        console.log("added new chunk for", index)
+        if (index == 0) {
+          this.investigation.current_chunk = chunk_html
+        }
+      }
+    },
+    async get_document_records() {
       this.document_record_metadata = await this.investigation.get_document_records()
       console.log(this.document_record_metadata)
     },
-    render_network() {
+    build_network() {
+      // TODO: This needs to be a child component!
       console.log("build network")
-      const nodes = [];
-      const edges = [];
-      const nodeMap = new Map(); // To track node ids
+      const nodes = []
+      const edges = []
+      //map is like a js object, but maintains the order of its entries
+      //it also has methods such as .has which is handy
+      const node_map = new Map()
 
-      // Function to add nodes if they don't exist
-      const addNode = (id, label) => {
-        if (nodeMap.has(id) == false) {
-          nodeMap.set(id, { id: nodeMap.size + 1, label });
-          nodes.push({ id: nodeMap.size, label });
+      //function to add nodes if they don't exist
+      const add_node = (id, label, title) => {
+        if (node_map.has(id) == false) {
+          node_map.set(id, { id: node_map.size + 1, label, title });
+          nodes.push({ id: node_map.size, label, title });
         }
       };
 
-      // Process entities to create nodes
-      // console.log("raw", this.diagram_entities[0])
+      const central_node = this.diagram_entities[0]
 
-      console.log("processed", this.diagram_entities)
-      this.diagram_entities.forEach((entity) => {
-        console.log(entity, entity.name, entity.label)
-        addNode(entity.name, `${entity.label}\n(${entity.name})`);
-      });
 
-      // Create edges based on narrative structure
-      let lastEntity = null;
-      this.diagram_entities.forEach((entity) => {
-        if (lastEntity) {
+      this.diagram_entities.forEach((diagram_entity) => {
+
+        let title = ''
+        // if the entity has been given relevant details for location or details
+        // map the value to a variable, then apply it to the title 
+        // (title is the hover tooltip)
+        // else add the node but dont give it a title
+        if (diagram_entity.relevant_details) {
+          const locations = diagram_entity.relevant_details.locations.map(location => location.name).join(', ');
+          const details = diagram_entity.relevant_details.details.map(detail => detail.name).join(', ');
+          title = `Locations: ${locations}\nDetails: ${details}`
+          add_node(diagram_entity.name, `${diagram_entity.name}\n${diagram_entity.label}`, title)
+        } else {
+          add_node(diagram_entity.name, `${diagram_entity.name}\n${diagram_entity.label}`)
+        }
+
+        if (central_node && diagram_entity.name !== central_node.name) {
           edges.push({
-            from: nodeMap.get(lastEntity.name).id,
-            to: nodeMap.get(entity.name).id
+            from: node_map.get(central_node.name).id,
+            to: node_map.get(diagram_entity.name).id
           });
         }
-        lastEntity = entity;
       });
 
+
+      //grab the network diagram element and apply options.
       const container = document.getElementById('network');
       const data = {
         nodes: nodes,
@@ -324,7 +461,16 @@ export default {
       const options = {
         nodes: {
           shape: 'dot',
-          size: 10
+          size: 10,
+          font: {
+            multi: 'html',
+            size: 12
+          }
+        },
+
+        interaction: {
+          tooltipDelay: 200,
+          hover: true
         },
 
         physics: {
@@ -344,6 +490,7 @@ export default {
           }
         },
         manipulation: {
+          // these functions allow for gui features built into vis js
           enabled: true,
           addNode: function (nodeData, callback) {
             nodeData.label = "New Node";
@@ -362,22 +509,13 @@ export default {
           },
           editEdge:
             function (edgeData, callback) {
-              // Prompt the user for a new label for the edge
-              const newLabel = prompt("Enter new label for the edge:", edgeData.label || "");
-
-              // If a label is provided, set it on the edgeData
-              if (newLabel !== null) {
-                edgeData.label = newLabel;
+              //allow labelling a link/edge
+              const new_label = prompt("Enter new label for the edge:", edgeData.label || "");
+              if (new_label !== null) {
+                edgeData.label = new_label;
               }
-
-              // Call the callback function with the updated edgeData
               callback(edgeData);
             },
-          // {
-          //   editWithoutDrag: function (data, callback) {
-          //     callback(data);
-          //   }
-          // },
           deleteNode: function (data, callback) {
             callback(data);
           },
@@ -452,7 +590,6 @@ export default {
       this.investigation.text_chunks[this.chunk_index] = highlighted
       this.investigation.current_chunk = this.investigation.text_chunks[this.chunk_index]
     },
-
     add_event_listeners_for_highlighting() {
       const indicators = this.$refs.highlighted_text_container.querySelectorAll('.indicator');
       this.$nextTick(() => { //next tick defers execution
@@ -480,8 +617,9 @@ export default {
       if (type == 'entity') {
         console.log(this.popup_text)
         new_significant_object = {
-          label: "ENTITY",
-          name: `${this.popup_text}`
+          label: "PERSON",
+          name: `${this.popup_text}`,
+          relevant_details: {locations: [], details: []}
         }
       } else if (type == 'detail') {
         console.log(this.popup_text)
@@ -568,6 +706,7 @@ export default {
       }
     },
     see_next_chunk() {
+      console.log("called next chunk")
       if (this.chunk_index < this.investigation.text_chunks.length) {
         this.chunk_index += 1
         this.investigation.current_chunk = this.investigation.text_chunks[this.chunk_index]
@@ -617,5 +756,24 @@ export default {
   padding: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   z-index: 1000;
+}
+
+::ng-deep div.vis-tooltip {
+  position: absolute;
+  visibility: hidden;
+  padding: 5px;
+  white-space: nowrap;
+  color: #000000;
+  background-color: #f5f4ed;
+
+  -moz-border-radius: 3px;
+  -webkit-border-radius: 3px;
+  border-radius: 3px;
+  border: 1px solid #808074;
+
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+
+  z-index: 5;
 }
 </style>

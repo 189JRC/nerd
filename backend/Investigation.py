@@ -1,6 +1,15 @@
 # This is the active python object that will persist data for the session.
 # Until DB models completed data will only persist for the lifespan of this object
 
+
+
+#TODO 
+# add filter rules to make highlight/ manage entities returned
+# Put together demo material
+# Consider the summary feature and pipe it in
+# Sort details from entities
+
+
 # NOTE: having experimented with other hugging face models, spacy library seems most applicable for this application
 # from transformers import pipeline
 import spacy
@@ -8,6 +17,9 @@ from spacy.matcher import Matcher
 from spacy.tokens import Doc
 import numpy as np
 import os
+
+
+
 directory = os.path.dirname(__file__) 
 
 class Investigation:
@@ -15,7 +27,7 @@ class Investigation:
         self.model = model
         
         self.nlp = self.instantiate_nlp_model()
-        self.add_custom_attributes()
+        #self.add_custom_attributes()
 
         self.patterns = self.create_example_patterns()
         self.processed_documents = self.preprocess_example_documents()
@@ -25,10 +37,16 @@ class Investigation:
         self.entity_texts_and_labels = []
         #self.instantiate_match_patterns()
 
-    def add_custom_attributes(self):
-        # Adding custom extension attributes to the Doc class
-        if not Doc.has_extension("metadata"):
-            Doc.set_extension("metadata", default={})
+    # def add_custom_attributes(self):
+    #     # Adding custom extension attributes to the Doc class
+    #     if not Doc.has_extension("metadata"):
+    #         Doc.set_extension("metadata", default={})
+
+    def create_document_summary(self, doc, parser, summariser):
+        #find number of sentences
+        summary = summariser(parser.document, sentences_count=1) 
+        summary_text = ' '.join(str(sentence) for sentence in summary)
+        return summary_text
 
     def preprocess_example_documents(self):
         # Read the contents of the text files
@@ -44,25 +62,28 @@ class Investigation:
         # Process the texts into spaCy documents
         doc1 = self.nlp(text1)
         doc2 = self.nlp(text2)
-        doc1._.metadata = {"source": "sample_text_1.txt", "other_info": "Additional metadata here"}
-        doc2._.metadata = {"source": "sample_text_2.txt", "other_info": "Additional metadata here"}
 
+        doc1.set_extension('origin', default=None, force=True)
+        doc2.set_extension('origin', default=None, force=True)
+
+        doc1._.origin = "Sample text 1"
+        doc2._.origin = "Sample text 2"
         return [doc1, doc2]
 
     def create_example_patterns(self):
         # TODO:3: store these patterns (with user defined patterns) in a db table for retrieval.
         # pattern will flag the string such as 'a teenager was reported missing'
         example_pattern1 = [
-            {"POS": "DET", "OP": "?"},
-            {"POS": "NOUN", "OP": "?"},
-            {"LEMMA": "be"},
-            {"POS": "VERB"},
-            {"POS": "VERB"},
+            {"LIKE_NUM": True},
+            {"LOWER": "men"}
         ]
         # pattern2 will flag the string 'Spanish Island'
         example_pattern2 = [
-            {"ENT_TYPE": "NORP"},
-            {"LOWER": "island"},
+            {"LOWER": "airbnb"},
+        ]
+
+        example_pattern2 = [
+            {"LOWER": "airbnb"},
         ]
         return {"example_pattern1":example_pattern1, "example_pattern2":example_pattern2}
 
@@ -85,6 +106,7 @@ class Investigation:
         #TODO:1: this should be applied to document metadata with the set_extensions method
         for segment in matched_segments:
             self.entity_texts_and_labels.append(segment)
+        return matched_segments
 
     def instantiate_nlp_model(self):
         if self.model == "spacy_en_sm":
@@ -98,17 +120,14 @@ class Investigation:
         #For now just return full text
         #doc = self.create_doc_object(text)
 
-        if text_type == 'article':
+        if text_type == 'article' or text_type == 'transcript':
             sentences = [sent.text for sent in doc.sents]
-            print(f"len(sentences) sentences found in text")
+            print(f"{len(sentences)} sentences found in text")
             chunks = []
             for index in range(0, len(sentences), chunk_size):
                 chunk = ' '.join(sentences[index:index + chunk_size])
                 chunks.append(chunk)
-
             print("created", len(chunks), "chunks from the document")
-        elif text_type == 'transcript':
-            chunks = [text]
         else:
             print("Problem in chunk_text() method. Cannot determine text_type")
         return chunks
@@ -118,7 +137,6 @@ class Investigation:
         doc.set_extension('origin', default=None, force=True)
         doc._.origin = metadata_value 
         return doc
-
 
     def create_doc_object(self, text, metadata_label=False, metadata_value=False):
         """Creates a doc object from a sample of text and adds it to the investigation's processed texts.
@@ -135,12 +153,7 @@ class Investigation:
             self.processed_documents.append(doc)
             print(f"Doc {doc.text[:10]} created with no metadata")
 
-        try:
-            # Currently only metadata to label documents is required
-            return doc
-        except:
-            print("Doc has unexpected metadata")
-            return doc, {metadata_label:metadata_value}
+        return doc
 
     def find_entities(self, doc, relevant_entities=None):
 
@@ -149,14 +162,14 @@ class Investigation:
         if relevant_entities == None:
             relevant_entities = [
                 "PERSON",
-                # "NORP",
+                #"NORP", #e.g. british, spanish
                 "FAC", #facilities
-                # "GPE", #geopolitical entities e.g. states
+                "GPE", #geopolitical entities e.g. states
                 "LOC",
-                "EVENT",
-                # "DATE",
-                # "TIME",
-                # "MONEY",
+                #"EVENT",
+                #"DATE",
+                #"TIME",
+                #"MONEY",
             ]
         
         for ent in doc.ents:
@@ -184,10 +197,13 @@ class Investigation:
         highest_similarity = -1
         best_doc = None
         top_most_similar = []
+        # after receiving duplicates on front end, this is a stop gap 
+        # to prevent duplicates
+        similarity_filter_list = []
 
         for doc in self.processed_documents:
-            if doc._.metadata:
-                print(doc._.metadata)
+            if doc._.origin:
+                print(doc._.origin)
             else:
                 print("DOC HAS NO METADATA")
             
@@ -198,17 +214,23 @@ class Investigation:
                     # Calculate similarity between the sentence's vector and search_vector
                     similarity = self.calculate_similarity(sentence.vector, search_vector)
                     
-                    # Update highest similarity and most similar sentence if applicable
+                    #this is probably not necessary anymore
+                    #now only using top most similar on front end
+                    #left here to avoid unnecessary damage
                     if similarity > highest_similarity:
                         highest_similarity = similarity
                         most_similar_sentence = sentence.text
                         best_doc = doc
                     
-                    # Append to top_most_similar if similarity is above a threshold
+                    #append to top_most_similar if similarity is above a threshold (really not very scientific!)
                     if similarity > 0.2:
-                        top_most_similar.append({"doc": doc.text, "doc_metadata": doc._.metadata, "sentence": sentence.text, "similarity": float(similarity)})
+                        if similarity not in similarity_filter_list:
+                            similarity_filter_list.append(similarity)
+                            top_most_similar.append({"doc": doc.text, "doc_metadata": doc._.origin, "sentence": sentence.text, "similarity": float(similarity)})
                 
         top_most_similar.sort(key=lambda similarity_value: similarity_value['similarity'], reverse=True)
+        # return the top 10 only
+        top_most_similar = top_most_similar[:11]
         
         #perhaps would be better to just return top_most_popular as a sorted list. it should have best_doc in it already.
         #for now keep best_doc in there (the no span is found with cosine sim > the value set for entry into the top_most_similar list)

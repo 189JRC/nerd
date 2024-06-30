@@ -1,47 +1,34 @@
-### Scaffolding for Web Application
+### Named Entity Recognition Diagramiser
 
-#### Purpose: A Containerised full web application. Starting point for any future website building. 
+#### Purpose: A tool to analyse text documents with Natural Language Processing
 
 Flask backend, vue/nginx frontend and postgres db.
 
-#### Local Development.
+#### Run Locally
 
 Start flask development server:
+- python3 -m venv venv
+- source venv/bin/activate
 - cd /backend
+- pip install -r requirements.txt
 - python3 app.py
 
 Start Vite front end development server:
+- ensure Node >= 18 is installed
 - cd /frontend
 - npm install -i
 - npm run build
 - npm run dev
 
-backend accessible on http://0.0.0.0:5000
-frontend accessible on http://0.0.0.0:8080
+frontend accessible on http://0.0.0.0:5173
 
-#### Testing for production.
+#### Notes
 
-In root directory
-- docker-compose build --no-cache
-- docker-compose up
+This application was built out of my web scaffolding framework with my preferred configuration.
+The files that are most relevant to the NERD application are:
 
-backend accessible on http://0.0.0.0:5000
-frontend accessible on http://0.0.0.0:8080
+backend/app.py
+backend/Investigation.py
 
-#### Deployment to a remote server.
-
-Connection to remote server instance required.
-SSH <ip-address> etc...
-
-- (For now) copy files across with scp.
-- docker-compose build --no-cache
-- docker-compose up
-
-backend accessible on http://<server-ip>:5000
-frontend accessible on http://<server-ip>:8080
-
-TODO: make sample github actions file to allow for one click deployment and setup
-TODO: comment on nginx.conf to show more detail on configuration options
-TODO: setup a fetch call from App.vue to ensure connection (and that db read/write can happen from frontend)
-TODO: include gunicorn server option as well as flask development server
-TODO: create a sample .env file
+frontend/js/Investigation.js
+frontend/components/EntryPoint.vue

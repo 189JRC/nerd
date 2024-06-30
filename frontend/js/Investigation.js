@@ -18,7 +18,6 @@ class Investigation {
             headers: {
               'Content-Type': 'application/json'
             },
-            // body: JSON.stringify({ text: "text" })
           });
   
           if (!response.ok) {
@@ -27,8 +26,7 @@ class Investigation {
   
           const document_record_metadata = await response.json();
           this.document_records = document_record_metadata
-          // this.make_significant_entities(data)
-  
+
         } catch (error) {
           console.error('There was a problem with the fetch. Error:', error);
         }
@@ -55,9 +53,7 @@ class Investigation {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-               
                 body: body
-                
             });
 
             if (!response.ok) {
@@ -66,8 +62,7 @@ class Investigation {
             // set conditional on desired_action not stringtovectorise
             if (string_to_vectorise == null) {
               const data = await response.json();
-              
-              // article text is now a list of
+
               this.text_chunks = data.text_chunks;
               this.current_chunk = this.text_chunks[0]
               this.entities = data.named_entities

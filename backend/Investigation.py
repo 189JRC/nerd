@@ -82,9 +82,6 @@ class Investigation:
             {"LOWER": "airbnb"},
         ]
 
-        example_pattern2 = [
-            {"LOWER": "airbnb"},
-        ]
         return {"example_pattern1":example_pattern1, "example_pattern2":example_pattern2}
 
     def instantiate_example_match_patterns(self):

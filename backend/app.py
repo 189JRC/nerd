@@ -49,7 +49,7 @@ def fetch_article(url):
         if not article:
             raise ValueError(f"No article was found at {url}")
 
-        # gather and process article text for response to fe
+        # gather and process article text for response to frontend
         article_text = []
         for paragraph in article.find_all("p"):
             article_text.append(paragraph.get_text())
@@ -72,12 +72,12 @@ def fetch_and_process_doc_data():
         pass
     
     if desired_action == "youtube_transcript":
-        # extract video id
-        # standard url string format == https://www.youtube.com/watch?v=RIWfH3iEgXU
+        #get a punctuated transcript of a youtube video from url
         _, video_id = url.split("watch?v=")
-        # TODO:2: make all endpoint error handling uniform
         transcript_text = youtube_transcript_scraper(video_id)
         transcript_text = punctuate_transcript(transcript_text)
+
+        #format raw text into spacy doc object and capture named entities
         doc = investigation.create_doc_object(transcript_text, metadata_label="origin", metadata_value=url)
         named_entities = investigation.find_entities(doc)
         matched_patterns = investigation.apply_matched_patterns(doc) 
@@ -92,8 +92,8 @@ def fetch_and_process_doc_data():
         text_summary = investigation.create_document_summary(doc, parser, summariser)
 
     elif desired_action == "article":
+        #scrape text from url source, extract patterns and named entities
         scraped_text = fetch_article(url)
-        # TODO:3: maybe return article in paragraph banches here. could also be a job for js object in frontend
         doc = investigation.create_doc_object(scraped_text, metadata_label="origin", metadata_value=url)
         named_entities = investigation.find_entities(doc)
         matched_patterns = investigation.apply_matched_patterns(doc) 
@@ -103,29 +103,22 @@ def fetch_and_process_doc_data():
             named_entities.append(pattern)
         
         text_chunks = investigation.chunk_text(doc, text_type="article")
-
         parser = PlaintextParser.from_string(doc.text, Tokenizer('english'))
         text_summary = investigation.create_document_summary(doc, parser, summariser)
 
     elif desired_action == "vector_search":
+        #perform vector cosine similarity comparison
         string_for_vector_comparison = data.get("string_for_vector_comparison")
-   
-
         best_doc, vector_similarity_data = investigation.investigate_vector_similarity(string_for_vector_comparison=string_for_vector_comparison)
         
+        #return dict with relevant source information
         most_similar_span = vector_similarity_data['most_similar_span']
         highest_similarity = str(float(vector_similarity_data['highest_similarity'])) #can not serialise from float 32> therefore turned into int
         best_doc_text = best_doc.text
         best_doc_metadata = best_doc._.origin
         top_most_similar = vector_similarity_data['top_most_similar']
-    
 
-        return_dict = dict(
-        #most_similar_span=most_similar_span,
-        #highest_similarity=highest_similarity,
-        #best_doc_metadata=best_doc_metadata,
-        #best_doc_text=best_doc_text,
-        top_most_similar=top_most_similar)
+        return_dict = dict(top_most_similar=top_most_similar)
 
         return jsonify(return_dict)
 
@@ -136,13 +129,12 @@ def fetch_and_process_doc_data():
         print("no target for scrape specified.")
         return jsonify({"article_text": "UNDER CONSTRUCTION"})
 
-    print(text_summary)
     return jsonify({"text_chunks": text_chunks, "named_entities": named_entities, "text_summary": text_summary})
-    # return jsonify({"article_text": chunked_text, "named_entities": named_entities_dict})
 
 @app.route("/get_document_records", methods=['GET'])
 def get_document_record():
     """Returns all processed documents (spaCy Doc objects) from the investigation"""
+
     doc_objects = investigation.processed_documents
     doc_object_metadata = []
     for doc_object in doc_objects:
@@ -161,7 +153,7 @@ def process_text_into_doc_object(doc, url_for_metadata_label):
 def youtube_transcript_scraper(video_id):
     """Gets the transcript for the given video ID. returns as string
     test example: #https://www.youtube.com/watch?v=1zErA1Igtow. 
-    NOTE: Not all youtube vids have transcripts!"""
+    TODO:2: Not all youtube vids have transcripts! Incorporate error handling for this"""
 
     try:
         transcript = YouTubeTranscriptApi.get_transcript(video_id)

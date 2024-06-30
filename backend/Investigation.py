@@ -204,11 +204,8 @@ class Investigation:
             else:
                 print("DOC HAS NO METADATA")
             
-            # Iterate over sentences in the document
             for sentence in doc.sents:
-                # Check if the sentence has a vector
                 if sentence.has_vector:
-                    # Calculate similarity between the sentence's vector and search_vector
                     similarity = self.calculate_similarity(sentence.vector, search_vector)
                     
                     #this is probably not necessary anymore
@@ -233,39 +230,6 @@ class Investigation:
         #for now keep best_doc in there (the no span is found with cosine sim > the value set for entry into the top_most_similar list)
         #then the result of this function would be nada
         return best_doc, dict(most_similar_span=most_similar_sentence, highest_similarity=float(highest_similarity), top_most_similar=top_most_similar)
-        # for doc in self.processed_documents:
-        #     # Iterate over tokens in the document
-        #     if doc._.metadata:
-        #         print(doc._.metadata)
-        #     else:
-        #         print("DOC HAS NO METADATA")
-        #     for token in doc:
-        #         # Check if the token and the subsequent tokens within the window size have vectors
-        #         if token.i + window_size <= len(doc):
-        #             # Get the span of tokens within the window size
-        #             span = doc[token.i : token.i + window_size]
-                    
-        #             # Check if all tokens in the span have vectors
-        #             if all(token.has_vector for token in span):
-        #                 # Calculate similarity between the span's vector and search_vector
-        #                 span_vector = np.mean([token.vector for token in span], axis=0)  # Example of averaging vectors
-        #                 similarity = self.calculate_similarity(span_vector, search_vector)
-        #                 if similarity > highest_similarity:
-        #                     highest_similarity = similarity
-        #                     most_similar_span = span
-        #                     best_doc = doc
-        #                 # Append to top_most_similar if similarity is above a threshold
-        #                 if similarity > 0.5:
-        #                     top_most_similar.append({"doc": doc.text, "doc_metadata": doc._.metadata, "span": span.text, "similarity": float(similarity)})
-
-  
-                
-        #         top_most_similar.sort(key=lambda similarity_value: similarity_value['similarity'], reverse=True)
-        
-        # #perhaps would be better to just return top_most_popular as a sorted list. it should have best_doc in it already.
-        # #for now keep best_doc in there (the no span is found with cosine sim > the value set for entry into the top_most_similar list)
-        # #then the result of this function would be nada
-        # return best_doc, dict(most_similar_span=most_similar_span.text, highest_similarity=float(highest_similarity), top_most_similar=top_most_similar)
 
     def calculate_similarity(self, vector1, vector2):
         cosine_similarity = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
